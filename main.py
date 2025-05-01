@@ -3,56 +3,46 @@
 import os
 import requests
 
-def tag_product(product_id, access_token, shop_domain):
-    url = f"https://{shop_domain}/admin/api/2024-01/products/{product_id}.json"
+def main():
+    access_token = os.environ.get("SHOPIFY_ACCESS_TOKEN")
+    shop_domain = os.environ.get("SHOPIFY_STORE_DOMAIN", "").strip().replace("https://", "").replace("http://", "")
+
+    if not access_token or not shop_domain:
+        print("❌ Missing SHOPIFY_ACCESS_TOKEN or SHOPIFY_STORE_DOMAIN")
+        return
+
     headers = {
         "X-Shopify-Access-Token": access_token,
         "Content-Type": "application/json"
     }
-    product = requests.get(url, headers=headers).json()["product"]
 
-    existing_tags = product.get("tags", "").split(", ")
-    if "On Sale" not in existing_tags:
-        existing_tags.append("On Sale")
+    url = f"https://{shop_domain}/admin/api/2024-01/products.json?limit=50"
 
-    payload = {
-        "product": {
-            "id": product_id,
-            "tags": ", ".join(existing_tags)
-        }
-    }
-    response = requests.put(url, headers=headers, json=payload)
-    print(f"Tagged product {product_id}: {response.status_code}")
-
-def main():
-    access_token = os.environ.get("SHOPIFY_ACCESS_TOKEN")
-    shop_domain = os.environ.get("SHOPIFY_STORE_DOMAIN")
-
-    if not access_token or not shop_domain:
-        print("Missing environment variables")
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"❌ API request failed: {e}")
         return
 
-    # TEMP: simple product fetch (not bulk yet)
-    url = f"https://{shop_domain}/admin/api/2024-01/products.json?limit=50"
-    headers = {
-        "X-Shopify-Access-Token": access_token
-    }
-    response = requests.get(url, headers=headers)
     products = response.json().get("products", [])
 
     for product in products:
-        should_tag = False
+        product_id = product.get("id")
+        title = product.get("title", "<no title>")
+        is_on_sale = False
+
         for variant in product.get("variants", []):
             price = float(variant.get("price", 0))
             compare_at = float(variant.get("compare_at_price") or 0)
             if compare_at > price:
-                should_tag = True
+                is_on_sale = True
                 break
 
-        if should_tag:
-            tag_product(product["id"], access_token, shop_domain)
+        if is_on_sale:
+            print(f"✅ Product {product_id} - '{title}' is ON SALE")
         else:
-            print(f"No sale for product {product['id']}")
+            print(f"❌ Product {product_id} - '{title}' is not on sale")
 
 if __name__ == "__main__":
     main()
