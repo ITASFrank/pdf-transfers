@@ -1,5 +1,5 @@
 # main.py
-
+import certifi
 import os
 import requests
 
@@ -19,7 +19,7 @@ def main():
     url = f"https://{shop_domain}/admin/api/2024-01/products.json?limit=50"
 
     try:
-        response = requests.get(url, headers=headers, verify=True)
+        response = requests.get(url, headers=headers, verify=certifi.where())
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"❌ API request failed: {e}")
