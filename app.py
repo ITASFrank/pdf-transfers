@@ -1,5 +1,6 @@
-from flask import Flask, request, send_file, render_template
+from flask import Flask, request, send_file, render_template, Response
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 import pandas as pd
 from fpdf import FPDF
 from datetime import datetime
