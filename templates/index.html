@@ -6,6 +6,22 @@
   <title>Transfer Sheet Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="icon" type="image/png" href="/static/logo.png">
+  <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var AppBridge = window.appBridge;
+    var createApp = AppBridge.default;
+    var actions = AppBridge.actions;
+
+    var app = createApp({
+      apiKey: "03a171379d7d0b27669e02f32eeacd46", // 👈 your real app client_id
+      shopOrigin: new URLSearchParams(window.location.search).get("shop"),
+    });
+
+    // Optional: Show title bar
+    app.dispatch(actions.TitleBar.update({ title: "Transfer Sheet Generator" }));
+  });
+</script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center py-12 px-4">
   <div class="max-w-xl w-full bg-white shadow-xl rounded-xl p-8">
