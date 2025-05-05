@@ -6,14 +6,15 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ✅ Allow Shopify to embed app in iframe
+
 @app.after_request
-def add_headers(response):
-    response.headers['Content-Security-Policy'] = "frame-ancestors https://admin.shopify.com https://*.myshopify.com"
-    response.headers['X-Frame-Options'] = "ALLOWALL"
+def force_headers(response: Response):
+    response.headers["Content-Security-Policy"] = "frame-ancestors https://admin.shopify.com https://*.myshopify.com"
+    response.headers["X-Frame-Options"] = "ALLOWALL"
     return response
 
 class TransferSheetPDF(FPDF):
