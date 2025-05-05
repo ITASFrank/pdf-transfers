@@ -9,6 +9,13 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# ✅ Allow Shopify to embed app in iframe
+@app.after_request
+def add_headers(response):
+    response.headers['Content-Security-Policy'] = "frame-ancestors https://admin.shopify.com https://*.myshopify.com"
+    response.headers['X-Frame-Options'] = "ALLOWALL"
+    return response
+
 class TransferSheetPDF(FPDF):
     def __init__(self, stock_transfer_title, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -91,7 +98,6 @@ def upload_csv():
         return send_file(output_path, as_attachment=True)
 
     return render_template("index.html")
-    
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
-
