@@ -23,7 +23,11 @@ def authenticate():
         {"WWW-Authenticate": 'Basic realm="Transfer Sheet Access"'}
     )
 
-@app.before_req
+@app.before_request
+def require_basic_auth():
+    auth = request.authorization
+    if not auth or not check_auth(auth.username, auth.password):
+        return authenticate()
 
 @app.after_request
 def force_headers(response: Response):
