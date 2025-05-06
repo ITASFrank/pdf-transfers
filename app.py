@@ -11,6 +11,19 @@ app.wsgi_app = ProxyFix(app.wsgi_app)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+USERNAME = "37"
+PASSWORD = "1234"
+
+def check_auth(username, password):
+    return username == USERNAME and password == PASSWORD
+
+def authenticate():
+    return Response(
+        "Login required", 401,
+        {"WWW-Authenticate": 'Basic realm="Transfer Sheet Access"'}
+    )
+
+@app.before_req
 
 @app.after_request
 def force_headers(response: Response):
