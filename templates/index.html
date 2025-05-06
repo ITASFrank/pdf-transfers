@@ -9,10 +9,6 @@
   <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
   <script>
   document.addEventListener("DOMContentLoaded", function () {
-    var AppBridge = window.appBridge;
-    var createApp = AppBridge.default;
-    var actions = AppBridge.actions;
-
     var app = createApp({
       apiKey: "03a171379d7d0b27669e02f32eeacd46", // 👈 your real app client_id
       shopOrigin: new URLSearchParams(window.location.search).get("shop"),
