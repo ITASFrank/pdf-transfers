@@ -14,8 +14,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 USERNAME = "37"
 PASSWORD = "1234"
 
+VENDOR_OPTIONS = ["Warehouse", "Store 1"]
+
+
 def check_auth(username, password):
     return username == USERNAME and password == PASSWORD
+
 
 def authenticate():
     return Response(
@@ -23,11 +27,13 @@ def authenticate():
         {"WWW-Authenticate": 'Basic realm="Transfer Sheet Access"'}
     )
 
+
 @app.before_request
 def require_basic_auth():
     auth = request.authorization
     if not auth or not check_auth(auth.username, auth.password):
         return authenticate()
+
 
 @app.after_request
 def force_headers(response: Response):
@@ -35,10 +41,13 @@ def force_headers(response: Response):
     response.headers["X-Frame-Options"] = "ALLOWALL"
     return response
 
+
 class TransferSheetPDF(FPDF):
-    def __init__(self, stock_transfer_title, *args, **kwargs):
+    def __init__(self, stock_transfer_title, vendor, clerk, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.stock_transfer_title = stock_transfer_title
+        self.vendor = vendor
+        self.clerk = clerk
 
     def header(self):
         try:
@@ -54,7 +63,9 @@ class TransferSheetPDF(FPDF):
         self.cell(0, 5, "Nanaimo, BC", ln=True)
 
         self.set_xy(150, 10)
-        self.cell(0, 5, "Vendor: STORE1", ln=True)
+        self.cell(0, 5, f"Vendor: {self.vendor}", ln=True)
+        self.set_x(150)
+        self.cell(0, 5, f"Clerk: {self.clerk}", ln=True)
         self.set_x(150)
         self.cell(0, 5, f"Date: {datetime.today().strftime('%m/%d/%Y')}", ln=True)
         self.set_x(150)
@@ -93,19 +104,24 @@ class TransferSheetPDF(FPDF):
             self.cell(col_widths[4], line_height * 2, str(row.get("Retail Price", "")), border=1)
             self.ln()
 
+
 @app.route("/", methods=["GET", "POST"])
 def upload_csv():
     if request.method == "POST":
         file = request.files["csv"]
-        if not file:
-            return "No file uploaded", 400
+        vendor = request.form.get("vendor")
+        clerk = request.form.get("clerk")
+
+        if not file or not vendor or not clerk:
+            return "Missing required fields", 400
+
         filename = secure_filename(file.filename)
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         file.save(filepath)
 
         df = pd.read_csv(filepath)
         stock_transfer_title = df["Stock Transfer"].iloc[0]
-        pdf = TransferSheetPDF(stock_transfer_title)
+        pdf = TransferSheetPDF(stock_transfer_title, vendor, clerk)
         pdf.add_page()
         pdf.transfer_table(df)
 
@@ -116,7 +132,8 @@ def upload_csv():
 
         return send_file(output_path, as_attachment=True)
 
-    return render_template("index.html")
+    return render_template("index.html", vendor_options=VENDOR_OPTIONS)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
