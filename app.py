@@ -16,10 +16,8 @@ PASSWORD = "1234"
 
 VENDOR_OPTIONS = ["Warehouse", "Store 1"]
 
-
 def check_auth(username, password):
     return username == USERNAME and password == PASSWORD
-
 
 def authenticate():
     return Response(
@@ -27,20 +25,17 @@ def authenticate():
         {"WWW-Authenticate": 'Basic realm="Transfer Sheet Access"'}
     )
 
-
 @app.before_request
 def require_basic_auth():
     auth = request.authorization
     if not auth or not check_auth(auth.username, auth.password):
         return authenticate()
 
-
 @app.after_request
 def force_headers(response: Response):
     response.headers["Content-Security-Policy"] = "frame-ancestors https://admin.shopify.com https://*.myshopify.com"
     response.headers["X-Frame-Options"] = "ALLOWALL"
     return response
-
 
 class TransferSheetPDF(FPDF):
     def __init__(self, stock_transfer_title, vendor, clerk, *args, **kwargs):
@@ -85,25 +80,39 @@ class TransferSheetPDF(FPDF):
 
     def transfer_table(self, data):
         self.set_font("Arial", "B", 12)
-        col_widths = [15, 30, 70, 30, 25]
-        headers = ["QTY", "SKU", "Product", "Bin Location", "Price"]
+        col_widths = [15, 100, 25, 25, 25]
+        headers = ["QTY", "Item (SKU + Description)", "Bin", "Price", ""]
+
         for i, header in enumerate(headers):
             self.cell(col_widths[i], 10, header, border=1, align='C')
         self.ln()
 
-        self.set_font("Arial", "", 12)
-        line_height = 8
-        for _, row in data.iterrows():
-            self.cell(col_widths[0], line_height * 2, str(row.get("Quantity", "")), border=1)
-            self.cell(col_widths[1], line_height * 2, str(row.get("SKU", "")), border=1)
-            x = self.get_x()
-            y = self.get_y()
-            self.multi_cell(col_widths[2], line_height, str(row.get("Product", "")), border=1)
-            self.set_xy(x + col_widths[2], y)
-            self.cell(col_widths[3], line_height * 2, str(row.get("Transfer Bin Location", "")), border=1)
-            self.cell(col_widths[4], line_height * 2, str(row.get("Retail Price", "")), border=1)
-            self.ln()
+        self.set_font("Arial", "", 10)
+        line_height = 5
 
+        for _, row in data.iterrows():
+            qty = str(row.get("Quantity", ""))
+            sku = str(row.get("SKU", ""))
+            product = str(row.get("Product", ""))
+            item = f"{sku} - {product}"
+            bin_loc = str(row.get("Transfer Bin Location", ""))
+            price = f"${row.get('Retail Price', 0):.2f}"
+
+            item_lines = self.get_string_width(item) / col_widths[1]
+            num_lines = int(item_lines) + 1
+            row_height = line_height * num_lines
+
+            x_start = self.get_x()
+            y_start = self.get_y()
+
+            self.multi_cell(col_widths[0], row_height, qty, border=1, align="C")
+            self.set_xy(x_start + col_widths[0], y_start)
+            self.multi_cell(col_widths[1], line_height, item, border=1)
+            self.set_xy(x_start + col_widths[0] + col_widths[1], y_start)
+            self.multi_cell(col_widths[2], row_height, bin_loc, border=1, align="C")
+            self.set_xy(x_start + col_widths[0] + col_widths[1] + col_widths[2], y_start)
+            self.multi_cell(col_widths[3], row_height, price, border=1, align="R")
+            self.set_y(y_start + row_height)
 
 @app.route("/", methods=["GET", "POST"])
 def upload_csv():
@@ -133,7 +142,6 @@ def upload_csv():
         return send_file(output_path, as_attachment=True)
 
     return render_template("index.html", vendor_options=VENDOR_OPTIONS)
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
