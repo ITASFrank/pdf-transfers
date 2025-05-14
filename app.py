@@ -231,7 +231,7 @@ def fetch_transfers():
     }
     """
 
-    response = requests.post(url, headers=headers, json={"query": query}, verify=certifi.where())
+    response = requests.post(token_url, json=payload, verify=False)
     return response.json()
 
 if __name__ == "__main__":
