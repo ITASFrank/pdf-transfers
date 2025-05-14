@@ -2,3 +2,5 @@ flask
 pandas
 fpdf
 Gunicorn
+requests
+python-dotenv
