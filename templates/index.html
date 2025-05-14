@@ -55,6 +55,31 @@
       <button type="submit" class="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700">Generate Transfer Sheet PDF</button>
     </form>
   </div>
+  
+<!-- Active Transfers Section -->
+<div class="mt-8 max-w-xl w-full bg-white shadow-xl rounded-xl p-6">
+  <h2 class="text-lg font-semibold text-gray-700 mb-4">Active Inventory Transfers</h2>
+  {% if active_transfers %}
+    <ul class="divide-y divide-gray-200">
+      {% for transfer in active_transfers %}
+        <li class="py-3 flex justify-between items-center">
+          <div>
+            <span class="font-medium">Transfer #{{ transfer.id }}</span>:
+            <span class="text-sm text-gray-600">{{ transfer.from }} → {{ transfer.to }}</span>
+            <div class="text-xs text-gray-500">Date: {{ transfer.date }}</div>
+          </div>
+          <a href="https://{{ shopify_store }}.myshopify.com/admin/transfers/{{ transfer.id }}" 
+             target="_blank"
+             class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+            View
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-gray-500 text-sm">No active transfers available.</p>
+  {% endif %}
+</div>
 
   <script>
     document.querySelector("#current-date").textContent = new Date().toLocaleDateString();
