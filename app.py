@@ -24,7 +24,7 @@ SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")  # e.g., your-store-name.myshopify.co
 SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY")
 SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET")
 SHOPIFY_SCOPES = os.getenv("SHOPIFY_SCOPES", "read_inventory,read_locations")
-REDIRECT_URI = os.getenv("REDIRECT_URI", "https://your-render-url.com/auth/callback")
+REDIRECT_URI = os.getenv("REDIRECT_URI")
 VENDOR_OPTIONS = ["Warehouse", "Store 1"]
 
 # PDF generator class
