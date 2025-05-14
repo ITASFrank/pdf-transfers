@@ -4,3 +4,4 @@ fpdf
 Gunicorn
 requests
 python-dotenv
+certifi
