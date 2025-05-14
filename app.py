@@ -127,7 +127,7 @@ def upload_csv():
         pdf.output(output_path)
 
         return send_file(output_path, as_attachment=True)
-        
+
     token = session.get("shopify_access_token")
     active_transfers = []
     if token:
@@ -170,12 +170,8 @@ def upload_csv():
         "index.html",
         vendor_options=VENDOR_OPTIONS,
         active_transfers=active_transfers,
-        shopify_store=SHOPIFY_STORE.split(".")[0]  # strips .myshopify.com
+        shopify_store=SHOPIFY_STORE.split(".")[0]
     )
-    
-    return render_template("index.html", vendor_options=VENDOR_OPTIONS)
-
-
 
 # Start OAuth
 @app.route("/auth/start")
@@ -198,14 +194,14 @@ def auth_callback():
         "client_secret": SHOPIFY_API_SECRET,
         "code": code
     }
-    response = requests.post(token_url, json=payload)
+    response = requests.post(token_url, json=payload, verify=certifi.where())
     if response.status_code == 200:
         session["shopify_access_token"] = response.json().get("access_token")
         return "✅ Token received. You can now call the Shopify API. Visit /transfers"
     else:
         return f"❌ Error getting token: {response.text}", 400
 
-# Fetch inventory transfers
+# Fetch inventory transfers (debug route)
 @app.route("/transfers")
 def fetch_transfers():
     token = session.get("shopify_access_token")
@@ -233,7 +229,7 @@ def fetch_transfers():
     }
     """
 
-response = requests.post(token_url, json=payload, verify=certifi.where())
+    response = requests.post(url, headers=headers, json={"query": query}, verify=certifi.where())
     return response.json()
 
 if __name__ == "__main__":
