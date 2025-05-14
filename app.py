@@ -2,6 +2,7 @@ import os
 import requests
 import urllib.parse
 import pandas as pd
+import certifi
 from flask import Flask, request, redirect, session, send_file, render_template, Response
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -232,7 +233,7 @@ def fetch_transfers():
     }
     """
 
-    response = requests.post(url, headers=headers, json={"query": query})
+response = requests.post(token_url, json=payload, verify=certifi.where())
     return response.json()
 
 if __name__ == "__main__":
