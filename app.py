@@ -126,8 +126,55 @@ def upload_csv():
         pdf.output(output_path)
 
         return send_file(output_path, as_attachment=True)
+        
+    token = session.get("shopify_access_token")
+    active_transfers = []
+    if token:
+        url = f"https://{SHOPIFY_STORE}/admin/api/2024-04/graphql.json"
+        headers = {
+            "X-Shopify-Access-Token": token,
+            "Content-Type": "application/json"
+        }
 
+        query = """
+        {
+          inventoryTransfers(first: 10, query: "status:OPEN") {
+            edges {
+              node {
+                legacyResourceId
+                fromLocation { name }
+                toLocation { name }
+                createdAt
+              }
+            }
+          }
+        }
+        """
+
+        response = requests.post(url, headers=headers, json={"query": query})
+        if response.ok:
+            data = response.json()
+            for edge in data["data"]["inventoryTransfers"]["edges"]:
+                node = edge["node"]
+                active_transfers.append({
+                    "id": node["legacyResourceId"],
+                    "from": node["fromLocation"]["name"],
+                    "to": node["toLocation"]["name"],
+                    "date": node["createdAt"][:10]
+                })
+        else:
+            print("⚠️ Shopify API error:", response.text)
+
+    return render_template(
+        "index.html",
+        vendor_options=VENDOR_OPTIONS,
+        active_transfers=active_transfers,
+        shopify_store=SHOPIFY_STORE.split(".")[0]  # strips .myshopify.com
+    )
+    
     return render_template("index.html", vendor_options=VENDOR_OPTIONS)
+
+
 
 # Start OAuth
 @app.route("/auth/start")
