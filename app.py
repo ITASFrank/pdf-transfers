@@ -10,6 +10,8 @@ from fpdf import FPDF
 from datetime import datetime
 from dotenv import load_dotenv
 
+os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
+
 # Load env vars
 load_dotenv()
 
