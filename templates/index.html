@@ -82,9 +82,8 @@
         <button class="btn btn-primary w-100" type="submit">Generate Transfer Sheet PDF</button>
     </form>
 </div>
-
 <div class="active-list">
-    <h4 class="mb-3" style="font-weight: 700;">Active Inventory Transfers</h4>
+    <h4 class="mb-3" style="font-weight: 700;">All Inventory Transfers</h4>
     {% if active_transfers and active_transfers|length > 0 %}
         <div class="table-responsive">
             <table class="table table-dark table-striped table-bordered align-middle">
@@ -96,6 +95,7 @@
                         <th scope="col">Origin</th>
                         <th scope="col">Destination</th>
                         <th scope="col">Status</th>
+                        <th scope="col">Archived</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -111,8 +111,17 @@
                                 <span class="badge bg-warning text-dark">Open</span>
                             {% elif t.status == "sent" %}
                                 <span class="badge bg-primary">Sent</span>
+                            {% elif t.status == "received" %}
+                                <span class="badge bg-success">Received</span>
                             {% else %}
                                 <span class="badge bg-secondary">{{ t.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if t.archived %}
+                                <span class="badge bg-danger">Yes</span>
+                            {% else %}
+                                <span class="badge bg-success">No</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -121,7 +130,7 @@
             </table>
         </div>
     {% else %}
-        <div class="text-secondary">No active transfers available.</div>
+        <div class="text-secondary">No transfers available.</div>
     {% endif %}
 </div>
 </body>
