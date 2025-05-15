@@ -147,12 +147,13 @@ def upload_csv():
                         "status": transfer.get("status", "")
                     })
 
-    return render_template(
-        "index.html",
-        vendor_options=VENDOR_OPTIONS,
-        active_transfers=active_transfers,
-        shopify_store=SHOPIFY_STORE.split(".")[0]
-    )
+return render_template(
+    "index.html",
+    vendor_options=VENDOR_OPTIONS,
+    active_transfers=active_transfers,
+    shopify_store=SHOPIFY_STORE.split(".")[0],
+    today_date=datetime.today().strftime("%m/%d/%Y")
+)
 
 @app.route("/auth/start")
 def auth_start():
