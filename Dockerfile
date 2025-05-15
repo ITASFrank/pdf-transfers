@@ -3,17 +3,17 @@ FROM python:3.11-slim
 # Install CA certificates
 RUN apt-get update && apt-get install -y ca-certificates
 
-# Set working directory
+# Set working directory to root (where your code is)
 WORKDIR /app
 
-# Copy your app files
-COPY . /app
+# Copy everything to container
+COPY . .
 
-# Install dependencies
+# Install Python dependencies
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Expose port
+# Expose the port your app runs on
 EXPOSE 10000
 
-# Run the app
+# Start the app
 CMD ["gunicorn", "-b", "0.0.0.0:10000", "app:app"]
