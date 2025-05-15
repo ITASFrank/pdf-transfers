@@ -185,7 +185,17 @@ def auth_start():
         f"&redirect_uri={urllib.parse.quote(REDIRECT_URI)}"
     )
     return redirect(auth_url)
-
+    
+@app.route("/test-ssl")
+def test_ssl():
+    import certifi
+    import requests
+    try:
+        r = requests.get("https://www.google.com", verify=certifi.where())
+        return f"✅ SSL OK! Status: {r.status_code}"
+    except requests.exceptions.SSLError as e:
+        return f"❌ SSL Error: {str(e)}"
+        
 # OAuth callback
 @app.route("/auth/callback")
 def auth_callback():
