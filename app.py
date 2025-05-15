@@ -21,10 +21,7 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
-SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY")
-SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET")
-SHOPIFY_SCOPES = os.getenv("SHOPIFY_SCOPES", "read_inventory,read_locations")
-REDIRECT_URI = os.getenv("REDIRECT_URI")
+STOCKY_API_KEY = os.getenv("STOCKY_API_KEY")
 VENDOR_OPTIONS = ["Warehouse", "Store 1"]
 
 class TransferSheetPDF(FPDF):
@@ -125,28 +122,34 @@ def upload_csv():
 
         return send_file(output_path, as_attachment=True)
 
-    token = session.get("shopify_access_token")
+    # --------- STOCKY TRANSFERS API ---------
     active_transfers = []
-    if token:
-        url = f"https://{SHOPIFY_STORE}/admin/api/2024-04/transfers.json"
+    if STOCKY_API_KEY and SHOPIFY_STORE:
+        url = "https://stocky.shopifyapps.com/api/v2/stock_transfers.json"
         headers = {
-            "X-Shopify-Access-Token": token,
+            "Authorization": f"API KEY={STOCKY_API_KEY}",
+            "Store-Name": SHOPIFY_STORE,
             "Content-Type": "application/json"
         }
-        response = requests.get(url, headers=headers, verify=certifi.where())
-        if response.ok:
-            data = response.json()
-            for transfer in data.get("transfers", []):
-                if transfer.get("status") == "open":
-                    active_transfers.append({
-                        "id": transfer.get("id"),
-                        "name": transfer.get("name", ""),
-                        "created_at": transfer.get("created_at", "")[:10],
-                        "origin": transfer.get("origin_location", {}).get("name", ""),
-                        "destination": transfer.get("destination_location", {}).get("name", ""),
-                        "status": transfer.get("status", "")
-                    })
-    
+        try:
+            response = requests.get(url, headers=headers)
+            if response.ok:
+                data = response.json()
+                for transfer in data.get("stock_transfers", []):
+                    if transfer.get("status") == "open":
+                        active_transfers.append({
+                            "id": transfer.get("id"),
+                            "name": transfer.get("name", ""),
+                            "created_at": transfer.get("created_at", "")[:10],
+                            "origin": transfer.get("origin_location_name", ""),
+                            "destination": transfer.get("destination_location_name", ""),
+                            "status": transfer.get("status", "")
+                        })
+            else:
+                print("Stocky API error:", response.status_code, response.text)
+        except Exception as e:
+            print("Error fetching Stocky transfers:", e)
+
     return render_template(
         "index.html",
         vendor_options=VENDOR_OPTIONS,
@@ -154,49 +157,6 @@ def upload_csv():
         shopify_store=SHOPIFY_STORE.split(".")[0],
         today_date=datetime.today().strftime("%m/%d/%Y")
     )
-
-@app.route("/auth/start")
-def auth_start():
-    auth_url = (
-        f"https://{SHOPIFY_STORE}/admin/oauth/authorize"
-        f"?client_id={SHOPIFY_API_KEY}"
-        f"&scope={urllib.parse.quote(SHOPIFY_SCOPES)}"
-        f"&redirect_uri={urllib.parse.quote(REDIRECT_URI)}"
-    )
-    return redirect(auth_url)
-
-@app.route("/auth/callback")
-def auth_callback():
-    code = request.args.get("code")
-    token_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
-    payload = {
-        "client_id": SHOPIFY_API_KEY,
-        "client_secret": SHOPIFY_API_SECRET,
-        "code": code
-    }
-
-    print("Using certifi bundle:", certifi.where())  # Debug log
-
-    response = requests.post(token_url, json=payload, verify=certifi.where())
-    if response.status_code == 200:
-        session["shopify_access_token"] = response.json().get("access_token")
-        return "✅ Token received. You can now call the Shopify API. Visit /transfers"
-    else:
-        return f"❌ Error getting token: {response.text}", 400
-
-@app.route("/transfers")
-def fetch_transfers():
-    token = session.get("shopify_access_token")
-    if not token:
-        return redirect("/auth/start")
-
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-04/transfers.json"
-    headers = {
-        "X-Shopify-Access-Token": token,
-        "Content-Type": "application/json"
-    }
-    response = requests.get(url, headers=headers, verify=certifi.where())
-    return response.json()
 
 @app.route("/test-ssl")
 def test_ssl():
