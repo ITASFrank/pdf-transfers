@@ -1,9 +1,8 @@
 import os
 import requests
-import urllib.parse
 import pandas as pd
 import certifi
-from flask import Flask, request, redirect, session, send_file, render_template
+from flask import Flask, request, send_file, render_template
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from fpdf import FPDF
@@ -112,20 +111,18 @@ def upload_csv():
         file.save(filepath)
 
         df = pd.read_csv(filepath)
-        stock_transfer_title = df["Stock Transfer"].iloc[0]
-        # Always cast to string to avoid .strip() error on int
-        stock_transfer_title_str = str(stock_transfer_title)
-        pdf = TransferSheetPDF(stock_transfer_title_str, vendor, clerk)
+        stock_transfer_title = str(df["Stock Transfer"].iloc[0])
+        pdf = TransferSheetPDF(stock_transfer_title, vendor, clerk)
         pdf.add_page()
         pdf.transfer_table(df)
 
-        output_path = os.path.join("outputs", f"transfer_{stock_transfer_title_str.replace(' ', '_')}.pdf")
+        output_path = os.path.join("outputs", f"transfer_{stock_transfer_title.replace(' ', '_')}.pdf")
         os.makedirs("outputs", exist_ok=True)
         pdf.output(output_path)
 
         return send_file(output_path, as_attachment=True)
 
-    # --------- STOCKY TRANSFERS API (GET) ---------
+    # --------- STOCKY TRANSFERS API (SHOW ALL) ---------
     active_transfers = []
     if STOCKY_API_KEY and SHOPIFY_STORE:
         url = "https://stocky.shopifyapps.com/api/v2/stock_transfers.json"
@@ -136,19 +133,19 @@ def upload_csv():
         }
         try:
             response = requests.get(url, headers=headers)
+            print("Stocky status:", response.status_code, response.text)  # Debug output
             if response.ok:
                 data = response.json()
                 for transfer in data.get("stock_transfers", []):
-                    # Show all transfers with status open or sent (not archived)
-                    if transfer.get("status") in ["open", "sent"] and not transfer.get("archived", False):
-                        active_transfers.append({
-                            "id": transfer.get("id"),
-                            "name": transfer.get("sequential_id", transfer.get("id")),
-                            "created_at": transfer.get("created_at", "")[:10],
-                            "origin": transfer.get("from_location_id", ""),
-                            "destination": transfer.get("to_location_id", ""),
-                            "status": transfer.get("status", "")
-                        })
+                    active_transfers.append({
+                        "id": transfer.get("id"),
+                        "name": transfer.get("sequential_id", transfer.get("id")),
+                        "created_at": transfer.get("created_at", "")[:10],
+                        "origin": transfer.get("from_location_id", ""),
+                        "destination": transfer.get("to_location_id", ""),
+                        "status": transfer.get("status", ""),
+                        "archived": transfer.get("archived", False)
+                    })
         except Exception as e:
             print("Error fetching Stocky transfers:", e)
 
