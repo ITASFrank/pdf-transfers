@@ -98,6 +98,7 @@ class TransferSheetPDF(FPDF):
 
 @app.route("/", methods=["GET", "POST"])
 def upload_csv():
+    # --------- PDF GENERATION ---------
     if request.method == "POST":
         file = request.files["csv"]
         vendor = request.form.get("vendor")
@@ -112,42 +113,44 @@ def upload_csv():
 
         df = pd.read_csv(filepath)
         stock_transfer_title = df["Stock Transfer"].iloc[0]
-        pdf = TransferSheetPDF(stock_transfer_title, vendor, clerk)
+        # Always cast to string to avoid .strip() error on int
+        stock_transfer_title_str = str(stock_transfer_title)
+        pdf = TransferSheetPDF(stock_transfer_title_str, vendor, clerk)
         pdf.add_page()
         pdf.transfer_table(df)
 
-        output_path = os.path.join("outputs", f"{stock_transfer_title.strip().replace(' ', '_')}.pdf")
+        output_path = os.path.join("outputs", f"transfer_{stock_transfer_title_str.replace(' ', '_')}.pdf")
         os.makedirs("outputs", exist_ok=True)
         pdf.output(output_path)
 
         return send_file(output_path, as_attachment=True)
 
-    # --------- STOCKY TRANSFERS API ---------
-active_transfers = []
-if STOCKY_API_KEY and SHOPIFY_STORE:
-    url = "https://stocky.shopifyapps.com/api/v2/stock_transfers.json"
-    headers = {
-        "Authorization": f"API KEY={STOCKY_API_KEY}",
-        "Store-Name": SHOPIFY_STORE,
-        "Content-Type": "application/json"
-    }
-    try:
-        response = requests.get(url, headers=headers)
-        if response.ok:
-            data = response.json()
-            for transfer in data.get("stock_transfers", []):
-                # Show all transfers with status open or sent (not archived)
-                if transfer.get("status") in ["open", "sent"] and not transfer.get("archived", False):
-                    active_transfers.append({
-                        "id": transfer.get("id"),
-                        "name": transfer.get("sequential_id", transfer.get("id")),
-                        "created_at": transfer.get("created_at", "")[:10],
-                        "origin": transfer.get("from_location_id", ""),
-                        "destination": transfer.get("to_location_id", ""),
-                        "status": transfer.get("status", "")
-                    })
-    except Exception as e:
-        print("Error fetching Stocky transfers:", e)
+    # --------- STOCKY TRANSFERS API (GET) ---------
+    active_transfers = []
+    if STOCKY_API_KEY and SHOPIFY_STORE:
+        url = "https://stocky.shopifyapps.com/api/v2/stock_transfers.json"
+        headers = {
+            "Authorization": f"API KEY={STOCKY_API_KEY}",
+            "Store-Name": SHOPIFY_STORE,
+            "Content-Type": "application/json"
+        }
+        try:
+            response = requests.get(url, headers=headers)
+            if response.ok:
+                data = response.json()
+                for transfer in data.get("stock_transfers", []):
+                    # Show all transfers with status open or sent (not archived)
+                    if transfer.get("status") in ["open", "sent"] and not transfer.get("archived", False):
+                        active_transfers.append({
+                            "id": transfer.get("id"),
+                            "name": transfer.get("sequential_id", transfer.get("id")),
+                            "created_at": transfer.get("created_at", "")[:10],
+                            "origin": transfer.get("from_location_id", ""),
+                            "destination": transfer.get("to_location_id", ""),
+                            "status": transfer.get("status", "")
+                        })
+        except Exception as e:
+            print("Error fetching Stocky transfers:", e)
 
     return render_template(
         "index.html",
