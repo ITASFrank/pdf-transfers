@@ -133,6 +133,7 @@ def upload_csv():
         }
         try:
             response = requests.get(url, headers=headers)
+            print("Stocky response:", response.status_code, response.text)   # <--- ADD THIS LINE!
             if response.ok:
                 data = response.json()
                 for transfer in data.get("stock_transfers", []):
@@ -149,6 +150,7 @@ def upload_csv():
                 print("Stocky API error:", response.status_code, response.text)
         except Exception as e:
             print("Error fetching Stocky transfers:", e)
+
 
     return render_template(
         "index.html",
