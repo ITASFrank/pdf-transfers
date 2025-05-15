@@ -10,10 +10,7 @@ from fpdf import FPDF
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Ensure certifi bundle is used
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
-
-# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
@@ -131,36 +128,24 @@ def upload_csv():
     token = session.get("shopify_access_token")
     active_transfers = []
     if token:
-        url = f"https://{SHOPIFY_STORE}/admin/api/2024-04/graphql.json"
+        url = f"https://{SHOPIFY_STORE}/admin/api/2024-04/transfers.json"
         headers = {
             "X-Shopify-Access-Token": token,
             "Content-Type": "application/json"
         }
-        query = """
-        {
-          inventoryTransfers(first: 10, query: "status:OPEN") {
-            edges {
-              node {
-                legacyResourceId
-                fromLocation { name }
-                toLocation { name }
-                createdAt
-              }
-            }
-          }
-        }
-        """
-        response = requests.post(url, headers=headers, json={"query": query}, verify=certifi.where())
+        response = requests.get(url, headers=headers, verify=certifi.where())
         if response.ok:
             data = response.json()
-            for edge in data["data"]["inventoryTransfers"]["edges"]:
-                node = edge["node"]
-                active_transfers.append({
-                    "id": node["legacyResourceId"],
-                    "from": node["fromLocation"]["name"],
-                    "to": node["toLocation"]["name"],
-                    "date": node["createdAt"][:10]
-                })
+            for transfer in data.get("transfers", []):
+                if transfer.get("status") == "open":
+                    active_transfers.append({
+                        "id": transfer.get("id"),
+                        "name": transfer.get("name", ""),
+                        "created_at": transfer.get("created_at", "")[:10],
+                        "origin": transfer.get("origin_location", {}).get("name", ""),
+                        "destination": transfer.get("destination_location", {}).get("name", ""),
+                        "status": transfer.get("status", "")
+                    })
 
     return render_template(
         "index.html",
@@ -204,26 +189,12 @@ def fetch_transfers():
     if not token:
         return redirect("/auth/start")
 
-    url = f"https://{SHOPIFY_STORE}/admin/api/2024-04/graphql.json"
+    url = f"https://{SHOPIFY_STORE}/admin/api/2024-04/transfers.json"
     headers = {
         "X-Shopify-Access-Token": token,
         "Content-Type": "application/json"
     }
-    query = """
-    {
-      inventoryTransfers(first: 5, query: "status:OPEN") {
-        edges {
-          node {
-            legacyResourceId
-            fromLocation { name }
-            toLocation { name }
-            createdAt
-          }
-        }
-      }
-    }
-    """
-    response = requests.post(url, headers=headers, json={"query": query}, verify=certifi.where())
+    response = requests.get(url, headers=headers, verify=certifi.where())
     return response.json()
 
 @app.route("/test-ssl")
