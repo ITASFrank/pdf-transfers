@@ -1,60 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <title>Harbour Chandler Transfers</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Simple Bootstrap via CDN for layout and form controls -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <style>
-        body { background: #20232a; color: #fff; font-family: Arial, sans-serif; }
-        .container { background: #23272f; padding: 32px; border-radius: 18px; max-width: 410px; margin: 48px auto; }
-        h1 { margin-bottom: 0; }
-        form { margin-bottom: 28px; }
-        input, select { width: 100%; margin-bottom: 12px; padding: 8px; background: #181b20; border: 1px solid #343942; color: #fff; border-radius: 6px; }
-        button { width: 100%; padding: 10px; background: #2065ff; color: #fff; border: none; border-radius: 8px; font-size: 1rem; }
-        .section { margin-top: 28px; background: #181b20; padding: 20px; border-radius: 10px; }
-        .transfers-list { margin-top: 14px; }
-        .transfers-list li { margin-bottom: 10px; }
-        .subtitle { color: #aaa; }
+        body {
+            background: #181a1b;
+            color: #f5f5f7;
+        }
+        .transfer-card {
+            background: #23272a;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+            padding: 32px 28px 32px 32px;
+            max-width: 500px;
+            margin: 50px auto 24px;
+        }
+        .logo-img {
+            max-width: 60px;
+        }
+        .btn-primary {
+            background: #215aff;
+            border: none;
+        }
+        .active-list {
+            background: #222427;
+            border-radius: 16px;
+            padding: 28px 24px 24px 24px;
+            max-width: 600px;
+            margin: 0 auto 32px;
+        }
+        label, .form-label {
+            color: #f5f5f7;
+        }
+        .form-control, .form-select {
+            background: #1a1c1e;
+            border: 1px solid #2a2c2f;
+            color: #f5f5f7;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #215aff;
+            box-shadow: 0 0 0 0.2rem #215aff40;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Harbour Chandler Transfers</h1>
-        <div class="subtitle">52 Esplanade<br>Nanaimo, BC</div>
-        <div style="float: right; margin-top: -38px;">Date: {{ today_date }}</div>
-
-        <form method="POST" enctype="multipart/form-data">
-            <label>Upload Stocky CSV File</label>
-            <input type="file" name="csv" accept=".csv" required />
-
-            <label>Select Vendor</label>
-            <select name="vendor" required>
-                <option value="">-- Select Vendor --</option>
-                {% for option in vendor_options %}
-                <option value="{{ option }}">{{ option }}</option>
-                {% endfor %}
-            </select>
-
-            <label>Clerk Name</label>
-            <input type="text" name="clerk" placeholder="Enter clerk's name" required />
-
-            <button type="submit">Generate Transfer Sheet PDF</button>
-        </form>
-
-        <div class="section">
-            <h2>Active Inventory Transfers</h2>
-            {% if active_transfers %}
-                <ul class="transfers-list">
-                {% for t in active_transfers %}
-                    <li>
-                        <strong>{{ t.name or 'Transfer #' ~ t.id }}</strong>
-                        ({{ t.origin }} ➡️ {{ t.destination }}, Created: {{ t.created_at }}, Status: {{ t.status|capitalize }})
-                    </li>
-                {% endfor %}
-                </ul>
-            {% else %}
-                <p>No active transfers available.</p>
-            {% endif %}
+<div class="transfer-card">
+    <div class="d-flex align-items-center mb-2">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Harbour Chandler Logo" class="logo-img me-3">
+        <div>
+            <h2 class="mb-0" style="font-weight: 700; font-size: 2rem;">Harbour Chandler Transfers</h2>
+            <small>52 Esplanade<br>Nanaimo, BC</small>
+        </div>
+        <div class="ms-auto text-end" style="margin-top:-16px;">
+            <div style="font-weight: 500;">Date: {{ today_date }}</div>
         </div>
     </div>
+    <hr style="border-color: #3a3b3c;">
+    <!-- CSV Upload Form -->
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="csv" class="form-label">Upload Stocky CSV File</label>
+            <input class="form-control" type="file" name="csv" id="csv" required>
+        </div>
+        <div class="mb-3">
+            <label for="vendor" class="form-label">Select Vendor</label>
+            <select class="form-select" name="vendor" id="vendor" required>
+                <option value="">-- Select Vendor --</option>
+                {% for v in vendor_options %}
+                    <option value="{{ v }}">{{ v }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="clerk" class="form-label">Clerk Name</label>
+            <input class="form-control" type="text" name="clerk" id="clerk" required placeholder="Enter clerk's name">
+        </div>
+        <button class="btn btn-primary w-100" type="submit">Generate Transfer Sheet PDF</button>
+    </form>
+</div>
+
+<div class="active-list">
+    <h4 class="mb-3" style="font-weight: 700;">Active Inventory Transfers</h4>
+    {% if active_transfers and active_transfers|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-bordered align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Transfer ID</th>
+                        <th scope="col">Created</th>
+                        <th scope="col">Origin</th>
+                        <th scope="col">Destination</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in active_transfers %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ t.name }}</td>
+                        <td>{{ t.created_at }}</td>
+                        <td>{{ t.origin }}</td>
+                        <td>{{ t.destination }}</td>
+                        <td>
+                            {% if t.status == "open" %}
+                                <span class="badge bg-warning text-dark">Open</span>
+                            {% elif t.status == "sent" %}
+                                <span class="badge bg-primary">Sent</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ t.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-secondary">No active transfers available.</div>
+    {% endif %}
+</div>
 </body>
 </html>
