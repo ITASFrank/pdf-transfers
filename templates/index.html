@@ -1,88 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transfer Sheet Generator</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" type="image/png" href="/static/logo.png">
-  <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      var createApp = AppBridge.default;
-      var app = createApp({
-        apiKey: "03a171379d7d0b27669e02f32eeacd46",
-        shopOrigin: new URLSearchParams(window.location.search).get("shop"),
-      });
-    });
-  </script>
+    <meta charset="UTF-8" />
+    <title>Harbour Chandler Transfers</title>
+    <style>
+        body { background: #20232a; color: #fff; font-family: Arial, sans-serif; }
+        .container { background: #23272f; padding: 32px; border-radius: 18px; max-width: 410px; margin: 48px auto; }
+        h1 { margin-bottom: 0; }
+        form { margin-bottom: 28px; }
+        input, select { width: 100%; margin-bottom: 12px; padding: 8px; background: #181b20; border: 1px solid #343942; color: #fff; border-radius: 6px; }
+        button { width: 100%; padding: 10px; background: #2065ff; color: #fff; border: none; border-radius: 8px; font-size: 1rem; }
+        .section { margin-top: 28px; background: #181b20; padding: 20px; border-radius: 10px; }
+        .transfers-list { margin-top: 14px; }
+        .transfers-list li { margin-bottom: 10px; }
+        .subtitle { color: #aaa; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center py-12 px-4">
-  <div class="max-w-xl w-full bg-white shadow-xl rounded-xl p-8">
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center space-x-4">
-        <img src="/static/logo.png" alt="Logo" class="w-14 h-14 object-contain">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800">Harbour Chandler Transfers</h1>
-          <p class="text-sm text-gray-500 leading-tight">52 Esplanade<br>Nanaimo, BC</p>
+<body>
+    <div class="container">
+        <h1>Harbour Chandler Transfers</h1>
+        <div class="subtitle">52 Esplanade<br>Nanaimo, BC</div>
+        <div style="float: right; margin-top: -38px;">Date: {{ "%m/%d/%Y"|strftime }}</div>
+
+        <form method="POST" enctype="multipart/form-data">
+            <label>Upload Stocky CSV File</label>
+            <input type="file" name="csv" accept=".csv" required />
+
+            <label>Select Vendor</label>
+            <select name="vendor" required>
+                <option value="">-- Select Vendor --</option>
+                {% for option in vendor_options %}
+                <option value="{{ option }}">{{ option }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Clerk Name</label>
+            <input type="text" name="clerk" placeholder="Enter clerk's name" required />
+
+            <button type="submit">Generate Transfer Sheet PDF</button>
+        </form>
+
+        <div class="section">
+            <h2>Active Inventory Transfers</h2>
+            {% if active_transfers %}
+                <ul class="transfers-list">
+                {% for t in active_transfers %}
+                    <li>
+                        <strong>{{ t.name or 'Transfer #' ~ t.id }}</strong>
+                        ({{ t.origin }} ➡️ {{ t.destination }}, Created: {{ t.created_at }}, Status: {{ t.status|capitalize }})
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>No active transfers available.</p>
+            {% endif %}
         </div>
-      </div>
-      <div class="text-right text-sm text-gray-500">
-        <p><strong>Date:</strong> <span id="current-date"></span></p>
-      </div>
     </div>
-
-    <form method="POST" enctype="multipart/form-data" class="space-y-4">
-      <div>
-        <label for="csv" class="block text-sm font-medium text-gray-700">Upload Stocky CSV File</label>
-        <input type="file" name="csv" id="csv" required class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500">
-      </div>
-
-      <div>
-        <label for="vendor" class="block text-sm font-medium text-gray-700">Select Vendor</label>
-        <select name="vendor" id="vendor" required class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
-          <option value="">-- Select Vendor --</option>
-          <option value="Warehouse">Warehouse</option>
-          <option value="Store 1">Store 1</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="clerk" class="block text-sm font-medium text-gray-700">Clerk Name</label>
-        <input type="text" name="clerk" id="clerk" required placeholder="Enter clerk's name" class="mt-2 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
-      </div>
-
-      <button type="submit" class="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700">Generate Transfer Sheet PDF</button>
-    </form>
-  </div>
-  
-<!-- Active Transfers Section -->
-<div class="mt-8 max-w-xl w-full bg-white shadow-xl rounded-xl p-6">
-  <h2 class="text-lg font-semibold text-gray-700 mb-4">Active Inventory Transfers</h2>
-  {% if active_transfers %}
-    <ul class="divide-y divide-gray-200">
-      {% for transfer in active_transfers %}
-        <li class="py-3 flex justify-between items-center">
-          <div>
-            <span class="font-medium">Transfer #{{ transfer.id }}</span>:
-            <span class="text-sm text-gray-600">{{ transfer.from }} → {{ transfer.to }}</span>
-            <div class="text-xs text-gray-500">Date: {{ transfer.date }}</div>
-          </div>
-          <a href="https://{{ shopify_store }}.myshopify.com/admin/transfers/{{ transfer.id }}" 
-             target="_blank"
-             class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
-            View
-          </a>
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p class="text-gray-500 text-sm">No active transfers available.</p>
-  {% endif %}
-</div>
-
-  <script>
-    document.querySelector("#current-date").textContent = new Date().toLocaleDateString();
-  </script>
 </body>
 </html>
