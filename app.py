@@ -3,34 +3,33 @@ import requests
 import urllib.parse
 import pandas as pd
 import certifi
-from flask import Flask, request, redirect, session, send_file, render_template, Response
+from flask import Flask, request, redirect, session, send_file, render_template
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from fpdf import FPDF
 from datetime import datetime
 from dotenv import load_dotenv
 
+# Ensure certifi bundle is used
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 
-# Load env vars
+# Load environment variables
 load_dotenv()
 
-# Flask setup
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "changeme")
+app.config["SESSION_COOKIE_SECURE"] = True
 app.wsgi_app = ProxyFix(app.wsgi_app)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Environment variables
-SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")  # e.g., your-store-name.myshopify.com
+SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY")
 SHOPIFY_API_SECRET = os.getenv("SHOPIFY_API_SECRET")
 SHOPIFY_SCOPES = os.getenv("SHOPIFY_SCOPES", "read_inventory,read_locations")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 VENDOR_OPTIONS = ["Warehouse", "Store 1"]
 
-# PDF generator class
 class TransferSheetPDF(FPDF):
     def __init__(self, stock_transfer_title, vendor, clerk, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,7 +102,6 @@ class TransferSheetPDF(FPDF):
             self.multi_cell(col_widths[3], row_height, price, border=1, align="R")
             self.set_y(y_start + row_height)
 
-# Upload/Generate PDF
 @app.route("/", methods=["GET", "POST"])
 def upload_csv():
     if request.method == "POST":
@@ -138,7 +136,6 @@ def upload_csv():
             "X-Shopify-Access-Token": token,
             "Content-Type": "application/json"
         }
-
         query = """
         {
           inventoryTransfers(first: 10, query: "status:OPEN") {
@@ -153,8 +150,7 @@ def upload_csv():
           }
         }
         """
-
-        response = requests.post(url, headers=headers, json={"query": query})
+        response = requests.post(url, headers=headers, json={"query": query}, verify=certifi.where())
         if response.ok:
             data = response.json()
             for edge in data["data"]["inventoryTransfers"]["edges"]:
@@ -165,8 +161,6 @@ def upload_csv():
                     "to": node["toLocation"]["name"],
                     "date": node["createdAt"][:10]
                 })
-        else:
-            print("⚠️ Shopify API error:", response.text)
 
     return render_template(
         "index.html",
@@ -175,7 +169,6 @@ def upload_csv():
         shopify_store=SHOPIFY_STORE.split(".")[0]
     )
 
-# Start OAuth
 @app.route("/auth/start")
 def auth_start():
     auth_url = (
@@ -185,18 +178,7 @@ def auth_start():
         f"&redirect_uri={urllib.parse.quote(REDIRECT_URI)}"
     )
     return redirect(auth_url)
-    
-@app.route("/test-ssl")
-def test_ssl():
-    import certifi
-    import requests
-    try:
-        r = requests.get("https://www.google.com", verify=certifi.where())
-        return f"✅ SSL OK! Status: {r.status_code}"
-    except requests.exceptions.SSLError as e:
-        return f"❌ SSL Error: {str(e)}"
-        
-# OAuth callback
+
 @app.route("/auth/callback")
 def auth_callback():
     code = request.args.get("code")
@@ -206,6 +188,9 @@ def auth_callback():
         "client_secret": SHOPIFY_API_SECRET,
         "code": code
     }
+
+    print("Using certifi bundle:", certifi.where())  # Debug log
+
     response = requests.post(token_url, json=payload, verify=certifi.where())
     if response.status_code == 200:
         session["shopify_access_token"] = response.json().get("access_token")
@@ -213,7 +198,6 @@ def auth_callback():
     else:
         return f"❌ Error getting token: {response.text}", 400
 
-# Fetch inventory transfers (debug route)
 @app.route("/transfers")
 def fetch_transfers():
     token = session.get("shopify_access_token")
@@ -225,7 +209,6 @@ def fetch_transfers():
         "X-Shopify-Access-Token": token,
         "Content-Type": "application/json"
     }
-
     query = """
     {
       inventoryTransfers(first: 5, query: "status:OPEN") {
@@ -240,9 +223,16 @@ def fetch_transfers():
       }
     }
     """
-
-    response = requests.post(token_url, json=payload, verify=False)
+    response = requests.post(url, headers=headers, json={"query": query}, verify=certifi.where())
     return response.json()
+
+@app.route("/test-ssl")
+def test_ssl():
+    try:
+        r = requests.get("https://www.google.com", verify=certifi.where())
+        return f"✅ SSL OK! Status: {r.status_code}"
+    except requests.exceptions.SSLError as e:
+        return f"❌ SSL Error: {str(e)}"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
