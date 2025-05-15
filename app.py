@@ -123,34 +123,31 @@ def upload_csv():
         return send_file(output_path, as_attachment=True)
 
     # --------- STOCKY TRANSFERS API ---------
-    active_transfers = []
-    if STOCKY_API_KEY and SHOPIFY_STORE:
-        url = "https://stocky.shopifyapps.com/api/v2/stock_transfers.json"
-        headers = {
-            "Authorization": f"API KEY={STOCKY_API_KEY}",
-            "Store-Name": SHOPIFY_STORE,
-            "Content-Type": "application/json"
-        }
-        try:
-            response = requests.get(url, headers=headers)
-            print("Stocky response:", response.status_code, response.text)   # <--- ADD THIS LINE!
-            if response.ok:
-                data = response.json()
-                for transfer in data.get("stock_transfers", []):
-                    if transfer.get("status") == "open":
-                        active_transfers.append({
-                            "id": transfer.get("id"),
-                            "name": transfer.get("name", ""),
-                            "created_at": transfer.get("created_at", "")[:10],
-                            "origin": transfer.get("origin_location_name", ""),
-                            "destination": transfer.get("destination_location_name", ""),
-                            "status": transfer.get("status", "")
-                        })
-            else:
-                print("Stocky API error:", response.status_code, response.text)
-        except Exception as e:
-            print("Error fetching Stocky transfers:", e)
-
+active_transfers = []
+if STOCKY_API_KEY and SHOPIFY_STORE:
+    url = "https://stocky.shopifyapps.com/api/v2/stock_transfers.json"
+    headers = {
+        "Authorization": f"API KEY={STOCKY_API_KEY}",
+        "Store-Name": SHOPIFY_STORE,
+        "Content-Type": "application/json"
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        if response.ok:
+            data = response.json()
+            for transfer in data.get("stock_transfers", []):
+                # Show all transfers with status open or sent (not archived)
+                if transfer.get("status") in ["open", "sent"] and not transfer.get("archived", False):
+                    active_transfers.append({
+                        "id": transfer.get("id"),
+                        "name": transfer.get("sequential_id", transfer.get("id")),
+                        "created_at": transfer.get("created_at", "")[:10],
+                        "origin": transfer.get("from_location_id", ""),
+                        "destination": transfer.get("to_location_id", ""),
+                        "status": transfer.get("status", "")
+                    })
+    except Exception as e:
+        print("Error fetching Stocky transfers:", e)
 
     return render_template(
         "index.html",
