@@ -143,7 +143,7 @@ def index():
                 items.append({
                     "quantity": row.get("QTY", row.get("Quantity", "")),
                     "sku": row.get("SKU", ""),
-                    "title": row.get("Title", row.get("Product", "")),
+                    "title": row.get("Product", row.get("Title", "")),
                     "bin_location": row.get("Bin Location", row.get("Transfer Bin Location", ""))
                 })
 
