@@ -46,7 +46,6 @@ def get_stocky_transfers():
             if response.ok:
                 data = response.json()
                 for transfer in data.get("stock_transfers", []):
-                    # Show only "draft" and "in transit" (not archived, not received)
                     status = (
                         "Draft" if transfer.get("status") == "draft"
                         else "In Transit" if transfer.get("status") == "sent"
@@ -64,7 +63,7 @@ def get_stocky_transfers():
                             "destination_name": get_location_name(transfer.get("to_location_id", "")),
                             "status": status,
                             "note": transfer.get("note", ""),
-                            "csv_url": f"https://stocky.shopifyapps.com/stock_transfers/{transfer.get('id')}/download.csv"
+                            "transfer_url": f"https://stocky.shopifyapps.com/stock_transfers/{transfer.get('id')}"
                         })
         except Exception as e:
             print("Error fetching Stocky transfers:", e)
