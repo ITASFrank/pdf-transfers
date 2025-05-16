@@ -64,7 +64,7 @@ def get_stocky_transfers():
                             "destination_name": get_location_name(transfer.get("to_location_id", "")),
                             "status": status,
                             "note": transfer.get("note", ""),
-                            "csv_url": f"https://stocky.shopifyapps.com/stock_transfers/{transfer.get('id')}/download.csv"
+                            "csv_url": f"https://stocky.shopifyapps.com/stock_transfers/{transfer.get('id')/download.csv}"
                         })
         except Exception as e:
             print("Error fetching Stocky transfers:", e)
