@@ -1,12 +1,13 @@
 import os
 import requests
 import certifi
-from flask import Flask, request, send_file, render_template, redirect, url_for
+from flask import Flask, request, send_file, render_template
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from fpdf import FPDF
 from datetime import datetime
 from dotenv import load_dotenv
+import pandas as pd
 
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 load_dotenv()
@@ -17,10 +18,9 @@ app.config["SESSION_COOKIE_SECURE"] = True
 app.wsgi_app = ProxyFix(app.wsgi_app)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs("outputs", exist_ok=True)
 
-SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
-SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY")
-SHOPIFY_API_PASS = os.getenv("SHOPIFY_API_PASS")
+SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")  # e.g., "harbourchandler.myshopify.com"
 STOCKY_API_KEY = os.getenv("STOCKY_API_KEY")
 VENDOR_OPTIONS = ["Warehouse", "Store 1"]
 
@@ -63,24 +63,36 @@ class TransferSheetPDF(FPDF):
         self.line(10, 63, 200, 63)
         self.ln(5)
 
-    def transfer_table(self, items):
+    def transfer_table(self, data):
         self.set_font("Arial", "B", 12)
-        col_widths = [15, 80, 40, 25, 25]
-        headers = ["QTY", "Item (Title + Variant)", "Bin Location", "Price", ""]
+        col_widths = [15, 100, 25, 25, 25]
+        headers = ["QTY", "Item (SKU + Description)", "Bin", "Price", ""]
         for i, header in enumerate(headers):
             self.cell(col_widths[i], 10, header, border=1, align='C')
         self.ln()
+
         self.set_font("Arial", "", 10)
         line_height = 5
-        for item in items:
-            qty = str(item.get("quantity", ""))
-            title = f"{item.get('product_title', '')} ({item.get('variant_title', '')})"
-            bin_loc = item.get("bin_location", "N/A")
-            price = item.get("retail_price", "")
-            row = [qty, title, bin_loc, price, ""]
-            for i, value in enumerate(row):
-                self.cell(col_widths[i], line_height * 2, str(value), border=1)
-            self.ln()
+        for _, row in data.iterrows():
+            qty = str(row.get("Quantity", ""))
+            sku = str(row.get("SKU", ""))
+            product = str(row.get("Product", ""))
+            item = f"{sku} - {product}"
+            bin_loc = str(row.get("Transfer Bin Location", ""))
+            price = f"${row.get('Retail Price', 0):.2f}"
+            item_lines = self.get_string_width(item) / col_widths[1]
+            num_lines = int(item_lines) + 1
+            row_height = line_height * num_lines
+            x_start = self.get_x()
+            y_start = self.get_y()
+            self.multi_cell(col_widths[0], row_height, qty, border=1, align="C")
+            self.set_xy(x_start + col_widths[0], y_start)
+            self.multi_cell(col_widths[1], line_height, item, border=1)
+            self.set_xy(x_start + col_widths[0] + col_widths[1], y_start)
+            self.multi_cell(col_widths[2], row_height, bin_loc, border=1, align="C")
+            self.set_xy(x_start + col_widths[0] + col_widths[1] + col_widths[2], y_start)
+            self.multi_cell(col_widths[3], row_height, price, border=1, align="R")
+            self.set_y(y_start + row_height)
 
 def get_stocky_transfers():
     active_transfers = []
@@ -97,6 +109,8 @@ def get_stocky_transfers():
                 data = response.json()
                 for transfer in data.get("stock_transfers", []):
                     if not transfer.get("archived", False):
+                        # Link to the transfer in Stocky (opens for CSV export)
+                        stocky_link = f"https://stocky.shopifyapps.com/stock_transfers/{transfer['id']}"
                         active_transfers.append({
                             "id": transfer.get("id"),
                             "sequential_id": transfer.get("sequential_id", transfer.get("id")),
@@ -105,29 +119,39 @@ def get_stocky_transfers():
                             "destination": transfer.get("to_location_id", ""),
                             "status": transfer.get("status", ""),
                             "note": transfer.get("note", ""),
-                            "items": transfer.get("stock_transfer_items", [])
+                            "stocky_link": stocky_link,
                         })
         except Exception as e:
             print("Error fetching Stocky transfers:", e)
     return active_transfers
 
-def fetch_bin_location(inventory_item_id):
-    url = (
-        f"https://{SHOPIFY_API_KEY}:{SHOPIFY_API_PASS}@"
-        f"{SHOPIFY_STORE}/admin/api/2024-04/inventory_items/{inventory_item_id}/metafields.json"
-    )
-    try:
-        response = requests.get(url, verify=certifi.where())
-        if response.ok:
-            for m in response.json().get("metafields", []):
-                if m.get("namespace") == "stocky" and m.get("key") == "bin_location":
-                    return m.get("value")
-    except Exception as e:
-        print(f"Bin location fetch failed for {inventory_item_id}: {e}")
-    return "N/A"
-
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "POST"])
 def index():
+    # --------- PDF GENERATION (FROM CSV) ---------
+    if request.method == "POST":
+        file = request.files["csv"]
+        vendor = request.form.get("vendor")
+        clerk = request.form.get("clerk")
+
+        if not file or not vendor or not clerk:
+            return "Missing required fields", 400
+
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+
+        df = pd.read_csv(filepath)
+        stock_transfer_title = str(df["Stock Transfer"].iloc[0])
+        pdf = TransferSheetPDF(stock_transfer_title, vendor, clerk)
+        pdf.add_page()
+        pdf.transfer_table(df)
+
+        output_path = os.path.join("outputs", f"transfer_{stock_transfer_title.replace(' ', '_')}.pdf")
+        pdf.output(output_path)
+
+        return send_file(output_path, as_attachment=True)
+
+    # --------- SHOW TRANSFER LIST ---------
     active_transfers = get_stocky_transfers()
     return render_template(
         "index.html",
@@ -135,32 +159,6 @@ def index():
         active_transfers=active_transfers,
         today_date=datetime.today().strftime("%m/%d/%Y"),
     )
-
-@app.route("/generate_pdf/<int:transfer_id>", methods=["GET", "POST"])
-def generate_pdf(transfer_id):
-    vendor = request.args.get("vendor", "Warehouse")
-    clerk = request.args.get("clerk", "Auto")
-    active_transfers = get_stocky_transfers()
-    transfer = next((t for t in active_transfers if t["id"] == transfer_id), None)
-    if not transfer:
-        return "Transfer not found", 404
-    items = []
-    for item in transfer["items"]:
-        bin_location = fetch_bin_location(item.get("inventory_item_id"))
-        items.append({
-            "quantity": item.get("quantity"),
-            "product_title": item.get("product_title"),
-            "variant_title": item.get("variant_title"),
-            "bin_location": bin_location,
-            "retail_price": "",  # You can fetch price if needed
-        })
-    pdf = TransferSheetPDF(str(transfer["sequential_id"]), vendor, clerk)
-    pdf.add_page()
-    pdf.transfer_table(items)
-    output_path = os.path.join("outputs", f"transfer_{transfer['sequential_id']}.pdf")
-    os.makedirs("outputs", exist_ok=True)
-    pdf.output(output_path)
-    return send_file(output_path, as_attachment=True)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
