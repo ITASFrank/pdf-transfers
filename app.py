@@ -127,37 +127,40 @@ class TransferSheetPDF(FPDF):
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        file = request.files.get("csv")
-        vendor = request.form.get("vendor")
-        clerk = request.form.get("clerk")
-        if not file or not vendor or not clerk:
-            return "Missing required fields", 400
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(filepath)
+        try:
+            file = request.files.get("csv")
+            vendor = request.form.get("vendor")
+            clerk = request.form.get("clerk")
+            if not file or not vendor or not clerk:
+                return "Missing required fields", 400
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(filepath)
 
-        # Accepts either "QTY" or "Quantity" and "BIN LOCATION" or "Transfer Bin Location"
-        df = pd.read_csv(filepath)
-        items = []
-        for _, row in df.iterrows():
-            items.append({
-                "quantity": row.get("QTY", row.get("Quantity", "")),
-                "sku": row.get("SKU", ""),
-                "title": row.get("Title", row.get("Product", "")),
-                "bin_location": row.get("Bin Location", row.get("Transfer Bin Location", ""))
-            })
+            df = pd.read_csv(filepath)
+            items = []
+            for _, row in df.iterrows():
+                items.append({
+                    "quantity": row.get("QTY", row.get("Quantity", "")),
+                    "sku": row.get("SKU", ""),
+                    "title": row.get("Title", row.get("Product", "")),
+                    "bin_location": row.get("Bin Location", row.get("Transfer Bin Location", ""))
+                })
 
-        # Use the Stock Transfer # from the first row if it exists
-        stock_transfer_title = str(df["Stock Transfer"].iloc[0]) if "Stock Transfer" in df else filename
+            stock_transfer_title = str(df["Stock Transfer"].iloc[0]) if "Stock Transfer" in df and not df.empty else filename
 
-        pdf = TransferSheetPDF(stock_transfer_title, vendor, clerk)
-        pdf.add_page()
-        pdf.transfer_table(items)
+            pdf = TransferSheetPDF(stock_transfer_title, vendor, clerk)
+            pdf.add_page()
+            pdf.transfer_table(items)
 
-        output_path = os.path.join("outputs", f"transfer_{stock_transfer_title.replace(' ', '_')}.pdf")
-        pdf.output(output_path)
-        return send_file(output_path, as_attachment=True)
+            output_path = os.path.join("outputs", f"transfer_{stock_transfer_title.replace(' ', '_')}.pdf")
+            pdf.output(output_path)
+            return send_file(output_path, as_attachment=True)
+        except Exception as e:
+            # Instead of generic 500, show the error in the browser for now
+            return f"PDF generation failed:<br><pre>{str(e)}</pre>", 500
 
+    # GET logic as before
     transfers = get_stocky_transfers()
     return render_template(
         "index.html",
@@ -165,6 +168,6 @@ def index():
         transfers=transfers,
         today_date=datetime.today().strftime("%Y-%m-%d")
     )
-
+    
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
