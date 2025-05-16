@@ -10,11 +10,17 @@
         .transfer-card { background: #23272a; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.45); padding: 32px 28px 32px 32px; max-width: 500px; margin: 50px auto 24px;}
         .logo-img { max-width: 60px; }
         .btn-primary { background: #215aff; border: none;}
-        .active-list { background: #222427; border-radius: 16px; padding: 28px 24px 24px 24px; max-width: 900px; margin: 0 auto 32px;}
+        .active-list { background: #222427; border-radius: 16px; padding: 28px 18px 24px 18px; max-width: 100%; margin: 0 auto 32px;}
         label, .form-label { color: #f5f5f7; }
         .form-control, .form-select { background: #1a1c1e; border: 1px solid #2a2c2f; color: #f5f5f7; }
         .form-control:focus, .form-select:focus { border-color: #215aff; box-shadow: 0 0 0 0.2rem #215aff40;}
-        .pdf-btn { font-size: 14px; }
+        .pdf-btn, .csv-btn { font-size: 14px; font-weight: 600; }
+        .csv-btn { background: #00cfff; border: none; color: #111; }
+        @media (max-width: 600px) {
+            .transfer-card, .active-list { max-width: 99vw; padding: 10px 4px; }
+            table { font-size: 13px; }
+            .csv-btn { width: 100%; margin-top: 3px; }
+        }
     </style>
 </head>
 <body>
@@ -30,7 +36,6 @@
         </div>
     </div>
     <hr style="border-color: #3a3b3c;">
-    <!-- CSV Upload Form -->
     <form method="POST" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="csv" class="form-label">Upload Stocky CSV File</label>
@@ -55,41 +60,39 @@
 
 <div class="active-list">
     <h4 class="mb-3" style="font-weight: 700;">Inventory Transfers (Non-Archived)</h4>
-    {% if active_transfers and active_transfers|length > 0 %}
+    {% if transfers and transfers|length > 0 %}
         <div class="table-responsive">
             <table class="table table-dark table-striped table-bordered align-middle">
                 <thead>
                     <tr>
-                        <th scope="col">#</th>
-                        <th scope="col">Transfer #</th>
-                        <th scope="col">Created</th>
-                        <th scope="col">Origin ID</th>
-                        <th scope="col">Destination ID</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Note</th>
-                        <th scope="col">Get CSV</th>
+                        <th>#</th>
+                        <th>Transfer #</th>
+                        <th>Created</th>
+                        <th>Origin</th>
+                        <th>Destination</th>
+                        <th>Status</th>
+                        <th>Get CSV</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for t in active_transfers %}
+                    {% for t in transfers %}
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ t.sequential_id }}</td>
                         <td>{{ t.created_at }}</td>
-                        <td>{{ t.origin }}</td>
-                        <td>{{ t.destination }}</td>
+                        <td>{{ t.origin_name }}</td>
+                        <td>{{ t.destination_name }}</td>
                         <td>
-                            {% if t.status == "open" %}
-                                <span class="badge bg-warning text-dark">Open</span>
-                            {% elif t.status == "sent" %}
-                                <span class="badge bg-primary">Sent</span>
+                            {% if t.status == "Draft" %}
+                                <span class="badge bg-warning text-dark">Draft</span>
+                            {% elif t.status == "In Transit" %}
+                                <span class="badge bg-primary">In Transit</span>
                             {% else %}
                                 <span class="badge bg-secondary">{{ t.status }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ t.note or '' }}</td>
                         <td>
-                            <a class="btn btn-sm btn-info pdf-btn" href="{{ t.stocky_link }}" target="_blank">Get CSV</a>
+                            <a class="btn btn-sm csv-btn" href="https://stocky.shopifyapps.com/stock_transfers/{{ t.id }}/csv" target="_blank">Get CSV</a>
                         </td>
                     </tr>
                     {% endfor %}
