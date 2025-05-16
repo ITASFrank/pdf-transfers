@@ -35,9 +35,6 @@
         </div>
     </div>
     <hr style="border-color: #3a3b3c;">
-    {% if error %}
-      <div class="alert alert-danger">{{ error }}</div>
-    {% endif %}
     <form method="POST" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="csv" class="form-label">Upload Stocky CSV File</label>
@@ -75,6 +72,7 @@
                         <th>Status</th>
                         <th>Note</th>
                         <th>Stocky Page</th>
+                        <th>Get CSV</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -99,6 +97,11 @@
                             <a class="btn btn-sm btn-outline-info" 
                                href="{{ t.stocky_url }}" 
                                target="_blank" rel="noopener">View in Stocky</a>
+                        </td>
+                        <td>
+                            <a class="btn btn-sm btn-success" 
+                               href="{{ t.csv_url }}" 
+                               target="_blank" rel="noopener">Get CSV</a>
                         </td>
                     </tr>
                     {% endfor %}
