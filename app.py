@@ -43,10 +43,11 @@ def get_stocky_transfers():
             "Content-Type": "application/json"
         }
         try:
-            response = requests.get(url, headers=headers, timeout=8)
+            response = requests.get(url, headers=headers)
             if response.ok:
                 data = response.json()
                 for transfer in data.get("stock_transfers", []):
+                    # Show only "draft" and "in transit" (not archived, not received)
                     status = (
                         "Draft" if transfer.get("status") == "draft"
                         else "In Transit" if transfer.get("status") == "sent"
@@ -58,13 +59,12 @@ def get_stocky_transfers():
                             "id": transfer.get("id"),
                             "sequential_id": transfer.get("sequential_id", transfer.get("id")),
                             "created_at": transfer.get("created_at", "")[:10],
-                            "origin_id": transfer.get("from_location_id", ""),
                             "origin_name": get_location_name(transfer.get("from_location_id", "")),
-                            "destination_id": transfer.get("to_location_id", ""),
                             "destination_name": get_location_name(transfer.get("to_location_id", "")),
                             "status": status,
                             "note": transfer.get("note", ""),
-                            "stocky_url": f"https://stocky.shopifyapps.com/stock_transfers/{transfer.get('id')}",
+                            "csv_url": f"https://stocky.shopifyapps.com/stock_transfers/{transfer.get('id')}/download.csv",
+                            "stocky_url": f"https://stocky.shopifyapps.com/stock_transfers/{transfer.get('id')}"
                         })
         except Exception as e:
             print("Error fetching Stocky transfers:", e)
@@ -106,7 +106,7 @@ class TransferSheetPDF(FPDF):
 
     def transfer_table(self, items):
         self.set_font("Arial", "B", 12)
-        col_widths = [15, 35, 100, 30]  # QTY, SKU, Title, Bin Location
+        col_widths = [15, 35, 100, 30]
         headers = ["QTY", "SKU", "Title", "Bin Location"]
         for i, header in enumerate(headers):
             self.cell(col_widths[i], 10, header, border=1, align='C')
@@ -126,49 +126,44 @@ class TransferSheetPDF(FPDF):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    error = None
     if request.method == "POST":
         file = request.files.get("csv")
         vendor = request.form.get("vendor")
         clerk = request.form.get("clerk")
         if not file or not vendor or not clerk:
-            error = "Missing required fields"
-        else:
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            file.save(filepath)
-            try:
-                df = pd.read_csv(filepath)
-                if df.empty:
-                    raise Exception("CSV is empty!")
-                items = []
-                for _, row in df.iterrows():
-                    items.append({
-                        "quantity": row.get("QTY", row.get("Quantity", "")),
-                        "sku": row.get("SKU", ""),
-                        "title": row.get("Title", row.get("Product", "")),
-                        "bin_location": row.get("Bin Location", row.get("Transfer Bin Location", ""))
-                    })
-                # Use Stock Transfer # from first row if it exists
-                stock_transfer_title = filename
-                if "Stock Transfer" in df.columns and not df["Stock Transfer"].isnull().all():
-                    stock_transfer_title = str(df["Stock Transfer"].dropna().values[0])
-                pdf = TransferSheetPDF(stock_transfer_title, vendor, clerk)
-                pdf.add_page()
-                pdf.transfer_table(items)
-                output_path = os.path.join("outputs", f"transfer_{stock_transfer_title.replace(' ', '_')}.pdf")
-                pdf.output(output_path)
-                return send_file(output_path, as_attachment=True)
-            except Exception as e:
-                error = f"Failed to generate PDF: {str(e)}"
-    # GET or show errors:
+            return "Missing required fields", 400
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+
+        # Accepts either "QTY" or "Quantity" and "BIN LOCATION" or "Transfer Bin Location"
+        df = pd.read_csv(filepath)
+        items = []
+        for _, row in df.iterrows():
+            items.append({
+                "quantity": row.get("QTY", row.get("Quantity", "")),
+                "sku": row.get("SKU", ""),
+                "title": row.get("Title", row.get("Product", "")),
+                "bin_location": row.get("Bin Location", row.get("Transfer Bin Location", ""))
+            })
+
+        # Use the Stock Transfer # from the first row if it exists
+        stock_transfer_title = str(df["Stock Transfer"].iloc[0]) if "Stock Transfer" in df else filename
+
+        pdf = TransferSheetPDF(stock_transfer_title, vendor, clerk)
+        pdf.add_page()
+        pdf.transfer_table(items)
+
+        output_path = os.path.join("outputs", f"transfer_{stock_transfer_title.replace(' ', '_')}.pdf")
+        pdf.output(output_path)
+        return send_file(output_path, as_attachment=True)
+
     transfers = get_stocky_transfers()
     return render_template(
         "index.html",
         vendor_options=VENDOR_OPTIONS,
         transfers=transfers,
-        today_date=datetime.today().strftime("%Y-%m-%d"),
-        error=error,
+        today_date=datetime.today().strftime("%Y-%m-%d")
     )
 
 if __name__ == "__main__":
