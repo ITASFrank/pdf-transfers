@@ -30,6 +30,27 @@
         </div>
     </div>
     <hr style="border-color: #3a3b3c;">
+    <!-- CSV Upload Form -->
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="csv" class="form-label">Upload Stocky CSV File</label>
+            <input class="form-control" type="file" name="csv" id="csv" required>
+        </div>
+        <div class="mb-3">
+            <label for="vendor" class="form-label">Select Vendor</label>
+            <select class="form-select" name="vendor" id="vendor" required>
+                <option value="">-- Select Vendor --</option>
+                {% for v in vendor_options %}
+                    <option value="{{ v }}">{{ v }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="clerk" class="form-label">Clerk Name</label>
+            <input class="form-control" type="text" name="clerk" id="clerk" required placeholder="Enter clerk's name">
+        </div>
+        <button class="btn btn-primary w-100" type="submit">Generate Transfer Sheet PDF</button>
+    </form>
 </div>
 
 <div class="active-list">
@@ -46,7 +67,7 @@
                         <th scope="col">Destination ID</th>
                         <th scope="col">Status</th>
                         <th scope="col">Note</th>
-                        <th scope="col">PDF</th>
+                        <th scope="col">Get CSV</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,7 +89,7 @@
                         </td>
                         <td>{{ t.note or '' }}</td>
                         <td>
-                            <a class="btn btn-sm btn-success pdf-btn" href="{{ url_for('generate_pdf', transfer_id=t.id) }}" target="_blank">PDF</a>
+                            <a class="btn btn-sm btn-info pdf-btn" href="{{ t.stocky_link }}" target="_blank">Get CSV</a>
                         </td>
                     </tr>
                     {% endfor %}
