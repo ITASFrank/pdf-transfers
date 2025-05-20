@@ -175,6 +175,14 @@ def index():
         transfers=transfers,
         today_date=datetime.today().strftime("%Y-%m-%d")
     )
+
+@app.route("/fetch-transfers", methods=["GET"])
+def fetch_transfers():
+    try:
+        transfers = get_stocky_transfers()
+        return {"transfers": transfers}, 200
+    except Exception as e:
+        return {"error": str(e)}, 500
     
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)

@@ -62,7 +62,7 @@
     <h4 class="mb-3" style="font-weight: 700;">Inventory Transfers (Non-Archived)</h4>
     {% if transfers and transfers|length > 0 %}
         <div class="table-responsive">
-            <table class="table table-dark table-striped table-bordered align-middle">
+            <table class="table table-dark table-striped table-bordered align-middle" id="transfers-table">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -109,9 +109,51 @@
                 </tbody>
             </table>
         </div>
+        <button id="show-more-btn" class="btn btn-secondary mt-3">Show More</button>
     {% else %}
         <div class="text-secondary">No active transfers available.</div>
     {% endif %}
 </div>
+
+<script>
+    document.getElementById("show-more-btn").addEventListener("click", function() {
+        fetch("/fetch-transfers")
+            .then(response => response.json())
+            .then(data => {
+                if (data.transfers) {
+                    const tableBody = document.querySelector("#transfers-table tbody");
+                    data.transfers.forEach((t, index) => {
+                        const row = `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${t.sequential_id}</td>
+                                <td>${t.created_at}</td>
+                                <td>${t.origin_name}</td>
+                                <td>${t.destination_name}</td>
+                                <td>
+                                    ${t.status === "Draft" ? '<span class="badge bg-warning text-dark">Draft</span>' :
+                                      t.status === "In Transit" ? '<span class="badge bg-primary">In Transit</span>' :
+                                      `<span class="badge bg-secondary">${t.status}</span>`}
+                                </td>
+                                <td>${t.note || ''}</td>
+                                <td>
+                                    <a class="btn btn-sm btn-outline-info" 
+                                       href="${t.stocky_url}" 
+                                       target="_blank" rel="noopener">View in Stocky</a>
+                                </td>
+                                <td>
+                                    <a class="btn btn-sm btn-success" 
+                                       href="${t.csv_url}" 
+                                       target="_blank" rel="noopener">Get CSV</a>
+                                </td>
+                            </tr>
+                        `;
+                        tableBody.insertAdjacentHTML("beforeend", row);
+                    });
+                }
+            })
+            .catch(error => console.error("Error fetching transfers:", error));
+    });
+</script>
 </body>
 </html>
