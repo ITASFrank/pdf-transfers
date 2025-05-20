@@ -105,7 +105,7 @@
                                    target="_blank" rel="noopener">Get CSV</a>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-secondary show-more-btn" data-transfer-id="{{ t.id }}">Show Items</button>
+                                <button class="btn btn-sm btn-secondary show-items-btn" data-transfer-id="{{ t.id }}">Show Items</button>
                             </td>
                         </tr>
                         <tr class="item-row" id="items-row-{{ t.id }}" style="display:none;">
@@ -122,42 +122,52 @@
         <div class="text-secondary">No active transfers available.</div>
     {% endif %}
 </div>
+
+<!-- Modal -->
+<div class="modal fade" id="itemsModal" tabindex="-1" aria-labelledby="itemsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background:#222427; color:#fff;">
+      <div class="modal-header">
+        <h5 class="modal-title" id="itemsModalLabel">Transfer Items</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="items-table-wrap">
+        <!-- Items Table inserted here -->
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-    document.querySelectorAll('.show-more-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            let transferId = btn.getAttribute('data-transfer-id');
-            let row = document.getElementById('items-row-' + transferId);
-            let container = document.getElementById('items-container-' + transferId);
-    
-            if (row.style.display === "none") {
-                row.style.display = "";
-                container.innerHTML = "Loading...";
-                fetch(`/transfer_items/${transferId}`)
-                    .then(resp => resp.json())
-                    .then(data => {
-                        if (data.items && data.items.length > 0) {
-                            let html = `<table class="table table-sm table-bordered"><thead><tr>
-                                <th>QTY</th><th>SKU</th><th>Product Title</th><th>Bin Location</th>
-                            </tr></thead><tbody>`;
-                            data.items.forEach(item => {
-                                html += `<tr>
-                                    <td>${item.quantity}</td>
-                                    <td>${item.sku}</td>
-                                    <td>${item.product_title}</td>
-                                    <td>${item.bin_location}</td>
-                                </tr>`;
-                            });
-                            html += "</tbody></table>";
-                            container.innerHTML = html;
-                        } else {
-                            container.innerHTML = "<em>No items found.</em>";
-                        }
+document.querySelectorAll('.show-items-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const transferId = this.getAttribute('data-transfer-id');
+        fetch(`/transfer_items/${transferId}`)
+            .then(resp => resp.json())
+            .then(data => {
+                let items = data.items;
+                let html = '';
+                if (items.length === 0) {
+                    html = '<div class="text-secondary">No items found.</div>';
+                } else {
+                    html += '<table class="table table-dark table-striped table-bordered">';
+                    html += '<thead><tr><th>QTY</th><th>SKU</th><th>Title</th><th>Bin Location</th></tr></thead><tbody>';
+                    items.forEach(item => {
+                        html += `<tr>
+                            <td>${item.quantity}</td>
+                            <td>${item.sku}</td>
+                            <td>${item.title}</td>
+                            <td>${item.bin_location}</td>
+                        </tr>`;
                     });
-            } else {
-                row.style.display = "none";
-            }
-        });
+                    html += '</tbody></table>';
+                }
+                document.getElementById('items-table-wrap').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('itemsModal'));
+                modal.show();
+            });
     });
-    </script>
+});
+</script>
 </body>
 </html>

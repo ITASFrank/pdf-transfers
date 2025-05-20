@@ -73,9 +73,8 @@ def get_stocky_transfers():
             print("Error fetching Stocky transfers:", e)
     return transfers
 
-@app.route("/transfer_items/<transfer_id>")
+@app.route("/transfer_items/<int:transfer_id>")
 def transfer_items(transfer_id):
-    # Fetch this transfer's details from Stocky
     url = f"https://stocky.shopifyapps.com/api/v2/stock_transfers/{transfer_id}.json"
     headers = {
         "Authorization": f"API KEY={STOCKY_API_KEY}",
@@ -83,26 +82,20 @@ def transfer_items(transfer_id):
         "Content-Type": "application/json"
     }
     resp = requests.get(url, headers=headers)
-    print(resp.text)  # <-- Add this line!
-    try:
-        resp = requests.get(url, headers=headers)
-        if resp.ok:
-            transfer = resp.json().get("stock_transfer", {})
-            items = transfer.get("stock_transfer_items", [])
-            result = []
-            for item in items:
-                result.append({
-                    "quantity": item.get("quantity"),
-                    "sku": item.get("sku", ""),
-                    "product_title": item.get("product_title", ""),
-                    "bin_location": item.get("bin_location", "")
-                })
-            return {"items": result}
-        else:
-            return {"items": []}
-    except Exception as e:
-        return {"items": [], "error": str(e)}
-
+    if resp.ok:
+        transfer = resp.json().get("stock_transfer", {})
+        items = transfer.get("stock_transfer_items", [])
+        # Only extract needed fields for front end
+        item_data = []
+        for item in items:
+            item_data.append({
+                "sku": item.get("sku", ""),
+                "title": item.get("title", ""),
+                "quantity": item.get("quantity", ""),
+                "bin_location": item.get("bin_location", "")
+            })
+        return {"items": item_data}
+    return {"items": []}, 404
 
 class TransferSheetPDF(FPDF):
     def __init__(self, stock_transfer_title, vendor, clerk, *args, **kwargs):
