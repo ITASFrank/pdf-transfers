@@ -85,14 +85,16 @@ def transfer_items(transfer_id):
     if resp.ok:
         transfer = resp.json().get("stock_transfer", {})
         items = transfer.get("stock_transfer_items", [])
-        # Only extract needed fields for front end
         item_data = []
         for item in items:
             item_data.append({
-                "sku": item.get("sku", ""),
-                "title": item.get("title", ""),
+                "id": item.get("id"),
+                "inventory_item_id": item.get("inventory_item_id"),
+                "product_title": item.get("product_title", ""),
+                "variant_title": item.get("variant_title", ""),
                 "quantity": item.get("quantity", ""),
-                "bin_location": item.get("bin_location", "")
+                "status": item.get("status", ""),
+                # No bin_location available
             })
         return {"items": item_data}
     return {"items": []}, 404

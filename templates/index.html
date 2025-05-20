@@ -138,7 +138,6 @@
     </div>
   </div>
 </div>
-
 <script>
     document.querySelectorAll('.show-items-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -152,25 +151,34 @@
                         html = '<div class="text-secondary">No items found.</div>';
                     } else {
                         html += '<table class="table table-dark table-striped table-bordered">';
-                        html += '<thead><tr><th>QTY</th><th>SKU</th><th>Title</th><th>Bin Location</th></tr></thead><tbody>';
+                        html += '<thead><tr>' +
+                            '<th>ID</th>' +
+                            '<th>Inventory Item ID</th>' +
+                            '<th>Product Title</th>' +
+                            '<th>Variant Title</th>' +
+                            '<th>Quantity</th>' +
+                            '<th>Status</th>' +
+                            '</tr></thead><tbody>';
                         items.forEach(item => {
                             html += `<tr>
+                                <td>${item.id}</td>
+                                <td>${item.inventory_item_id}</td>
+                                <td>${item.product_title}</td>
+                                <td>${item.variant_title}</td>
                                 <td>${item.quantity}</td>
-                                <td>${item.sku}</td>
-                                <td>${item.title}</td>
-                                <td>${item.bin_location}</td>
+                                <td>${item.status}</td>
                             </tr>`;
                         });
                         html += '</tbody></table>';
                     }
                     document.getElementById('items-table-wrap').innerHTML = html;
-                    // Show the modal
                     var modal = new bootstrap.Modal(document.getElementById('itemsModal'));
                     modal.show();
                 });
         });
     });
     </script>
+    
     
 </body>
 </html>
