@@ -171,7 +171,8 @@
                         });
                         html += '</tbody></table>';
                     }
-                    document.getElementById('items-table-wrap').innerHTML = html;
+                    var title = `Transfer Items for #${transferId}`;
+                    document.getElementById('itemsModalLabel').innerText = title;
                     var modal = new bootstrap.Modal(document.getElementById('itemsModal'));
                     modal.show();
                 });
