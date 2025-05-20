@@ -27,6 +27,9 @@ VENDOR_OPTIONS = ["Warehouse", "Store 1"]
 LOCATION_NAMES = {
     "78527987890": "TEST - WAREHOUSE",
     "78528086194": "TEST - IN-STORE",
+    "75578179762": "Nanaimo Store",
+    "72534458546": "Warehouse",
+    "76564201650": "BRS Endless Aisle",
     # Add more as needed
 }
 
@@ -79,6 +82,8 @@ def transfer_items(transfer_id):
         "Store-Name": SHOPIFY_STORE,
         "Content-Type": "application/json"
     }
+    resp = requests.get(url, headers=headers)
+    print(resp.text)  # <-- Add this line!
     try:
         resp = requests.get(url, headers=headers)
         if resp.ok:
