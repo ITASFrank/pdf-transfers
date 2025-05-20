@@ -2,7 +2,7 @@ import os
 import requests
 import certifi
 import pandas as pd
-from flask import Flask, request, send_file, render_template
+from flask import Flask, request, send_file, render_template, Response
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from fpdf import FPDF
@@ -126,6 +126,13 @@ class TransferSheetPDF(FPDF):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    auth = request.authorization
+    if not auth or auth.username != "37" or auth.password != "1234":
+        return Response(
+            "Login required", 401,
+            {"WWW-Authenticate": 'Basic realm="Login Required"'}
+        )
+
     if request.method == "POST":
         try:
             file = request.files.get("csv")
