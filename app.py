@@ -70,6 +70,35 @@ def get_stocky_transfers():
             print("Error fetching Stocky transfers:", e)
     return transfers
 
+@app.route("/transfer_items/<transfer_id>")
+def transfer_items(transfer_id):
+    # Fetch this transfer's details from Stocky
+    url = f"https://stocky.shopifyapps.com/api/v2/stock_transfers/{transfer_id}.json"
+    headers = {
+        "Authorization": f"API KEY={STOCKY_API_KEY}",
+        "Store-Name": SHOPIFY_STORE,
+        "Content-Type": "application/json"
+    }
+    try:
+        resp = requests.get(url, headers=headers)
+        if resp.ok:
+            transfer = resp.json().get("stock_transfer", {})
+            items = transfer.get("stock_transfer_items", [])
+            result = []
+            for item in items:
+                result.append({
+                    "quantity": item.get("quantity"),
+                    "sku": item.get("sku", ""),
+                    "product_title": item.get("product_title", ""),
+                    "bin_location": item.get("bin_location", "")
+                })
+            return {"items": result}
+        else:
+            return {"items": []}
+    except Exception as e:
+        return {"items": [], "error": str(e)}
+
+
 class TransferSheetPDF(FPDF):
     def __init__(self, stock_transfer_title, vendor, clerk, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -175,14 +204,6 @@ def index():
         transfers=transfers,
         today_date=datetime.today().strftime("%Y-%m-%d")
     )
-
-@app.route("/fetch-transfers", methods=["GET"])
-def fetch_transfers():
-    try:
-        transfers = get_stocky_transfers()
-        return {"transfers": transfers}, 200
-    except Exception as e:
-        return {"error": str(e)}, 500
     
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)

@@ -62,7 +62,7 @@
     <h4 class="mb-3" style="font-weight: 700;">Inventory Transfers (Non-Archived)</h4>
     {% if transfers and transfers|length > 0 %}
         <div class="table-responsive">
-            <table class="table table-dark table-striped table-bordered align-middle" id="transfers-table">
+            <table class="table table-dark table-striped table-bordered align-middle">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -76,84 +76,88 @@
                         <th>Get CSV</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for t in transfers %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ t.sequential_id }}</td>
-                        <td>{{ t.created_at }}</td>
-                        <td>{{ t.origin_name }}</td>
-                        <td>{{ t.destination_name }}</td>
-                        <td>
-                            {% if t.status == "Draft" %}
-                                <span class="badge bg-warning text-dark">Draft</span>
-                            {% elif t.status == "In Transit" %}
-                                <span class="badge bg-primary">In Transit</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ t.status }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ t.note or '' }}</td>
-                        <td>
-                            <a class="btn btn-sm btn-outline-info" 
-                               href="{{ t.stocky_url }}" 
-                               target="_blank" rel="noopener">View in Stocky</a>
-                        </td>
-                        <td>
-                            <a class="btn btn-sm btn-success" 
-                               href="{{ t.csv_url }}" 
-                               target="_blank" rel="noopener">Get CSV</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
+                    <tbody>
+                        {% for t in transfers %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ t.sequential_id }}</td>
+                            <td>{{ t.created_at }}</td>
+                            <td>{{ t.origin_name }}</td>
+                            <td>{{ t.destination_name }}</td>
+                            <td>
+                                {% if t.status == "Draft" %}
+                                    <span class="badge bg-warning text-dark">Draft</span>
+                                {% elif t.status == "In Transit" %}
+                                    <span class="badge bg-primary">In Transit</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ t.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ t.note or '' }}</td>
+                            <td>
+                                <a class="btn btn-sm btn-outline-info"
+                                   href="{{ t.stocky_url }}"
+                                   target="_blank" rel="noopener">View in Stocky</a>
+                            </td>
+                            <td>
+                                <a class="btn btn-sm btn-success"
+                                   href="{{ t.csv_url }}"
+                                   target="_blank" rel="noopener">Get CSV</a>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-secondary show-more-btn" data-transfer-id="{{ t.id }}">Show Items</button>
+                            </td>
+                        </tr>
+                        <tr class="item-row" id="items-row-{{ t.id }}" style="display:none;">
+                            <td colspan="11">
+                                <div id="items-container-{{ t.id }}">Loading...</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    
             </table>
         </div>
-        <button id="show-more-btn" class="btn btn-secondary mt-3">Show More</button>
     {% else %}
         <div class="text-secondary">No active transfers available.</div>
     {% endif %}
 </div>
-
 <script>
-    document.getElementById("show-more-btn").addEventListener("click", function() {
-        fetch("/fetch-transfers")
-            .then(response => response.json())
-            .then(data => {
-                if (data.transfers) {
-                    const tableBody = document.querySelector("#transfers-table tbody");
-                    data.transfers.forEach((t, index) => {
-                        const row = `
-                            <tr>
-                                <td>${index + 1}</td>
-                                <td>${t.sequential_id}</td>
-                                <td>${t.created_at}</td>
-                                <td>${t.origin_name}</td>
-                                <td>${t.destination_name}</td>
-                                <td>
-                                    ${t.status === "Draft" ? '<span class="badge bg-warning text-dark">Draft</span>' :
-                                      t.status === "In Transit" ? '<span class="badge bg-primary">In Transit</span>' :
-                                      `<span class="badge bg-secondary">${t.status}</span>`}
-                                </td>
-                                <td>${t.note || ''}</td>
-                                <td>
-                                    <a class="btn btn-sm btn-outline-info" 
-                                       href="${t.stocky_url}" 
-                                       target="_blank" rel="noopener">View in Stocky</a>
-                                </td>
-                                <td>
-                                    <a class="btn btn-sm btn-success" 
-                                       href="${t.csv_url}" 
-                                       target="_blank" rel="noopener">Get CSV</a>
-                                </td>
-                            </tr>
-                        `;
-                        tableBody.insertAdjacentHTML("beforeend", row);
+    document.querySelectorAll('.show-more-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            let transferId = btn.getAttribute('data-transfer-id');
+            let row = document.getElementById('items-row-' + transferId);
+            let container = document.getElementById('items-container-' + transferId);
+    
+            if (row.style.display === "none") {
+                row.style.display = "";
+                container.innerHTML = "Loading...";
+                fetch(`/transfer_items/${transferId}`)
+                    .then(resp => resp.json())
+                    .then(data => {
+                        if (data.items && data.items.length > 0) {
+                            let html = `<table class="table table-sm table-bordered"><thead><tr>
+                                <th>QTY</th><th>SKU</th><th>Product Title</th><th>Bin Location</th>
+                            </tr></thead><tbody>`;
+                            data.items.forEach(item => {
+                                html += `<tr>
+                                    <td>${item.quantity}</td>
+                                    <td>${item.sku}</td>
+                                    <td>${item.product_title}</td>
+                                    <td>${item.bin_location}</td>
+                                </tr>`;
+                            });
+                            html += "</tbody></table>";
+                            container.innerHTML = html;
+                        } else {
+                            container.innerHTML = "<em>No items found.</em>";
+                        }
                     });
-                }
-            })
-            .catch(error => console.error("Error fetching transfers:", error));
+            } else {
+                row.style.display = "none";
+            }
+        });
     });
-</script>
+    </script>
 </body>
 </html>
