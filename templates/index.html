@@ -24,6 +24,43 @@
     </style>
 </head>
 <body>
+    <!-- Help Button (Question Mark) -->
+<button id="helpBtn" type="button" class="btn btn-outline-light position-fixed" 
+        style="top: 18px; right: 24px; z-index: 1051; border-radius: 50%; font-size: 1.8em; width: 44px; height: 44px;" 
+        data-bs-toggle="modal" data-bs-target="#helpModal">
+    ?
+</button>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: #23272a; color: #fff;">
+      <div class="modal-header">
+        <h5 class="modal-title" id="helpModalLabel">How to Make an Inventory Transfer</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" style="font-size:1.1em;">
+        <ol>
+          <li>Click the <b>Get CSV</b> button for the transfer you want.<br>
+              <span style="color:#cfc;">If prompted, enter or <button class="btn btn-sm btn-outline-info" onclick="copyShopifyLink()">Copy</button> <code>2a7006-21.myshopify.com</code></span>
+          </li>
+          <li>Download the CSV (from browser download bar or your Downloads folder).</li>
+          <li>Drop the CSV file into the <b>PDF Generator</b> above, or click <b>Browse</b> to select it.</li>
+          <li>Select vendor, enter clerk name, and click <b>Generate & Download PDF</b>.</li>
+        </ol>
+        <div style="margin-top:1em;">
+          <img src="PATH_TO_YOUR_SCREENSHOT" style="max-width:100%;border-radius:8px;border:1px solid #333;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function copyShopifyLink() {
+    navigator.clipboard.writeText("2a7006-21.myshopify.com");
+    alert("Copied: 2a7006-21.myshopify.com");
+}
+</script>
 <div class="transfer-card">
     <div class="d-flex align-items-center mb-2">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Harbour Chandler Logo" class="logo-img me-3">
@@ -138,48 +175,5 @@
     </div>
   </div>
 </div>
-<script>
-    document.querySelectorAll('.show-items-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const transferId = this.getAttribute('data-transfer-id');
-            fetch(`/transfer_items/${transferId}`)
-                .then(resp => resp.json())
-                .then(data => {
-                    let items = data.items || [];
-                    let html = '';
-                    if (items.length === 0) {
-                        html = '<div class="text-secondary">No items found.</div>';
-                    } else {
-                        html += '<table class="table table-dark table-striped table-bordered">';
-                        html += '<thead><tr>' +
-                            '<th>ID</th>' +
-                            '<th>Inventory Item ID</th>' +
-                            '<th>Product Title</th>' +
-                            '<th>Variant Title</th>' +
-                            '<th>Quantity</th>' +
-                            '<th>Status</th>' +
-                            '</tr></thead><tbody>';
-                        items.forEach(item => {
-                            html += `<tr>
-                                <td>${item.id}</td>
-                                <td>${item.inventory_item_id}</td>
-                                <td>${item.product_title}</td>
-                                <td>${item.variant_title}</td>
-                                <td>${item.quantity}</td>
-                                <td>${item.status}</td>
-                            </tr>`;
-                        });
-                        html += '</tbody></table>';
-                    }
-                    var title = `Transfer Items for #${transferId}`;
-                    document.getElementById('itemsModalLabel').innerText = title;
-                    var modal = new bootstrap.Modal(document.getElementById('itemsModal'));
-                    modal.show();
-                });
-        });
-    });
-    </script>
-    
-    
 </body>
 </html>
