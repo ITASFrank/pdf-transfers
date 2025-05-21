@@ -136,22 +136,17 @@ class TransferSheetPDF(FPDF):
 
     def transfer_table(self, items):
         self.set_font("Arial", "B", 12)
-        col_widths = [15, 35, 100, 30]
-        headers = ["QTY", "SKU", "Title", "Bin Location"]
+        col_widths = [15, 140, 35]  # Adjust as needed for your page size
+        headers = ["QTY", "Title", "Bin Location"]
         for i, header in enumerate(headers):
             self.cell(col_widths[i], 10, header, border=1, align='C')
         self.ln()
         self.set_font("Arial", "", 10)
         line_height = 6
         for item in items:
-            qty = str(item.get("quantity", ""))
-            sku = str(item.get("sku", ""))
-            title = str(item.get("title", ""))
-            bin_loc = str(item.get("bin_location", ""))
-            self.cell(col_widths[0], line_height, qty, border=1, align='C')
-            self.cell(col_widths[1], line_height, sku, border=1)
-            self.cell(col_widths[2], line_height, title, border=1)
-            self.cell(col_widths[3], line_height, bin_loc, border=1, align='C')
+            self.cell(col_widths[0], line_height, str(item.get("qty", "")), border=1, align='C')
+            self.cell(col_widths[1], line_height, str(item.get("title", "")), border=1)
+            self.cell(col_widths[2], line_height, str(item.get("bin_location", "")), border=1, align='C')
             self.ln()
 
 # Authentication decorator
@@ -208,9 +203,25 @@ def index():
         try:
             # Read CSV and generate PDF
             df = pd.read_csv(csv_path)
+            items = []
+            for _, row in df.iterrows():
+                qty = str(row.get("Quantity", ""))
+                product_title = str(row.get("Product", ""))
+                variant_title = row.get("Title", "")
+                if variant_title and variant_title != "Default Title":
+                    full_title = f"{product_title} ({variant_title})"
+                else:
+                    full_title = product_title
+                bin_location = str(row.get("Transfer Bin Location", ""))
+                items.append({
+                    "qty": qty,
+                    "title": full_title,
+                    "bin_location": bin_location,
+                })
+
             pdf = TransferSheetPDF(stock_transfer_title="Inventory Transfer", vendor=vendor, clerk=clerk)
             pdf.add_page()
-            pdf.transfer_table(df.to_dict(orient="records"))
+            pdf.transfer_table(items)
             pdf.output(pdf_path)
 
             # Send the generated PDF to the user
