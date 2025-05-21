@@ -63,7 +63,7 @@
         </div>
     </div>
     <hr style="border-color: #3a3b3c;">
-    <form method="POST" enctype="multipart/form-data">
+    <form method="POST" action="{{ url_for('generate_pdf') }}" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="csv" class="form-label">Upload Stocky CSV File</label>
             <input class="form-control" type="file" name="csv" id="csv" required>
