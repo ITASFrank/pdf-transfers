@@ -16,7 +16,7 @@
     <meta name="msapplication-TileColor" content="#da532c">
     <meta name="msapplication-config" content="/static/favicon/browserconfig.xml">
     <meta name="theme-color" content="#ffffff">
-    <script src="/static/css/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
     <!-- Help Button (Question Mark) -->
@@ -135,14 +135,6 @@ function copyShopifyLink() {
                                 <a class="btn btn-sm btn-success"
                                    href="{{ t.csv_url }}"
                                    target="_blank" rel="noopener">Get CSV</a>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-secondary show-items-btn" data-transfer-id="{{ t.id }}">Show Items</button>
-                            </td>
-                        </tr>
-                        <tr class="item-row" id="items-row-{{ t.id }}" style="display:none;">
-                            <td colspan="11">
-                                <div id="items-container-{{ t.id }}">Loading...</div>
                             </td>
                         </tr>
                         {% endfor %}
