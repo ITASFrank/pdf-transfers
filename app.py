@@ -2,12 +2,13 @@ import os
 import requests
 import certifi
 import pandas as pd
-from flask import Flask, request, send_file, render_template, Response
+from flask import Flask, request, send_file, render_template, Response, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from fpdf import FPDF
 from datetime import datetime
 from dotenv import load_dotenv
+from functools import wraps
 
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 load_dotenv()
@@ -153,7 +154,38 @@ class TransferSheetPDF(FPDF):
             self.cell(col_widths[3], line_height, bin_loc, border=1, align='C')
             self.ln()
 
+# Authentication decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash("You need to log in to access this page.", "warning")
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        # Replace this with your actual authentication logic
+        if username == 'admin' and password == 'password':  # Example credentials
+            session['user_id'] = username
+            flash("Logged in successfully!", "success")
+            return redirect(url_for('index'))
+        else:
+            flash("Invalid username or password.", "danger")
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    flash("Logged out successfully.", "success")
+    return redirect(url_for('login'))
+
 @app.route("/", methods=["GET", "POST"])
+@login_required
 def index():
     if request.method == "POST":
         username = request.form.get("username")
