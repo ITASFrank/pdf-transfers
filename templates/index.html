@@ -17,6 +17,7 @@
     <meta name="msapplication-config" content="/static/favicon/browserconfig.xml">
     <meta name="theme-color" content="#ffffff">
     <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/copyShopifyLink.js"></script>
 </head>
 <body>
     <!-- Help Button (Question Mark) -->
@@ -50,12 +51,6 @@
     </div>
   </div>
 </div>
-<script>
-function copyShopifyLink() {
-    navigator.clipboard.writeText("2a7006-21.myshopify.com");
-    alert("Copied: 2a7006-21.myshopify.com");
-}
-</script>
 <div class="transfer-card">
     <div class="d-flex align-items-center mb-2">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Harbour Chandler Logo" class="logo-img me-3">
