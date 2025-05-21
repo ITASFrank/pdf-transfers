@@ -169,8 +169,7 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        # Replace this with your actual authentication logic
-        if username == 'admin' and password == 'password':  # Example credentials
+        if username == '37' and password == '1234':  # Example credentials
             session['user_id'] = username
             flash("Logged in successfully!", "success")
             return redirect(url_for('index'))
@@ -188,22 +187,18 @@ def logout():
 @login_required
 def index():
     if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        if username == "37" and password == "1234":
-            # Proceed to the main page
-            transfers = get_stocky_transfers()
-            return render_template(
-                "index.html",
-                vendor_options=VENDOR_OPTIONS,
-                transfers=transfers,
-                today_date=datetime.today().strftime("%Y-%m-%d")
-            )
-        else:
-            return render_template("login.html", error="Invalid credentials"), 401
+        # Handle form submission for generating PDFs
+        # ...existing code for handling file uploads and PDF generation...
+        pass
 
-    # Render login page for GET requests
-    return render_template("login.html")
+    # Render the main page with transfers and vendor options
+    transfers = get_stocky_transfers()
+    return render_template(
+        "index.html",
+        vendor_options=VENDOR_OPTIONS,
+        transfers=transfers,
+        today_date=datetime.today().strftime("%Y-%m-%d")
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
