@@ -187,9 +187,38 @@ def logout():
 @login_required
 def index():
     if request.method == "POST":
-        # Handle form submission for generating PDFs
-        # ...existing code for handling file uploads and PDF generation...
-        pass
+        # Handle form submission
+        csv_file = request.files.get("csv")
+        vendor = request.form.get("vendor")
+        clerk = request.form.get("clerk")
+
+        if not csv_file or not vendor or not clerk:
+            flash("All fields are required.", "danger")
+            return redirect(url_for("index"))
+
+        # Save the uploaded CSV file
+        csv_filename = secure_filename(csv_file.filename)
+        csv_path = os.path.join(UPLOAD_FOLDER, csv_filename)
+        csv_file.save(csv_path)
+
+        # Generate the PDF
+        pdf_filename = f"{csv_filename.rsplit('.', 1)[0]}.pdf"
+        pdf_path = os.path.join("outputs", pdf_filename)
+
+        try:
+            # Read CSV and generate PDF
+            df = pd.read_csv(csv_path)
+            pdf = TransferSheetPDF(stock_transfer_title="Inventory Transfer", vendor=vendor, clerk=clerk)
+            pdf.add_page()
+            pdf.transfer_table(df.to_dict(orient="records"))
+            pdf.output(pdf_path)
+
+            # Send the generated PDF to the user
+            return send_file(pdf_path, as_attachment=True)
+        except Exception as e:
+            print("Error generating PDF:", e)
+            flash("An error occurred while generating the PDF.", "danger")
+            return redirect(url_for("index"))
 
     # Render the main page with transfers and vendor options
     transfers = get_stocky_transfers()
