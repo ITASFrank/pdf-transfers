@@ -18,6 +18,7 @@
     <meta name="theme-color" content="#ffffff">
     <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/copyShopifyLink.js"></script>
+    <script src="/static/js/helpModal.js"></script>
 </head>
 <body>
     <!-- Help Button (Question Mark) -->
@@ -44,6 +45,11 @@
           <li>Drop the CSV file into the <b>PDF Generator</b> above, or click <b>Browse</b> to select it.</li>
           <li>Select vendor, enter clerk name, and click <b>Generate & Download PDF</b>.</li>
         </ol>
+        <div style="margin-top:1em; text-align: center;">
+          <img id="instructionGif" src="{{ url_for('static', filename='instructions.gif') }}" alt="Instruction GIF" style="max-width: 100%; border-radius: 8px; border: 1px solid #333;">
+          <br>
+          <button class="btn btn-sm btn-outline-light mt-2" onclick="restartGif()">↻ Restart GIF</button>
+        </div>
       </div>
     </div>
   </div>
