@@ -1,4 +1,5 @@
 function restartGif() {
     const gif = document.getElementById('instructionGif');
-    gif.src = gif.src; // Reset the GIF by reassigning its source
+    const src = gif.src.split('?')[0]; // Remove any existing query parameters
+    gif.src = `${src}?t=${new Date().getTime()}`; // Append a unique timestamp to force reload
 }
