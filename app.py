@@ -10,21 +10,24 @@ from datetime import datetime
 from dotenv import load_dotenv
 from functools import wraps
 
+# Load environment variables and configure Flask app
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "changeme")
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "changeme")  # Secret key for session management
 app.config["SESSION_COOKIE_SECURE"] = True
-app.wsgi_app = ProxyFix(app.wsgi_app)
+app.wsgi_app = ProxyFix(app.wsgi_app)  # Middleware for handling proxy headers
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 
+# Shopify and Stocky API configuration
 SHOPIFY_STORE = os.getenv("SHOPIFY_STORE")
 STOCKY_API_KEY = os.getenv("STOCKY_API_KEY")
 VENDOR_OPTIONS = ["Warehouse", "Store 1"]
 
+# Mapping location IDs to human-readable names
 LOCATION_NAMES = {
     "78527987890": "TEST - WAREHOUSE",
     "78528086194": "TEST - IN-STORE",
@@ -35,9 +38,11 @@ LOCATION_NAMES = {
 }
 
 def get_location_name(location_id):
+    """Get the human-readable name for a location ID."""
     return LOCATION_NAMES.get(str(location_id), str(location_id))
 
 def get_stocky_transfers():
+    """Fetch inventory transfers from the Stocky API."""
     transfers = []
     if STOCKY_API_KEY and SHOPIFY_STORE:
         url = "https://stocky.shopifyapps.com/api/v2/stock_transfers.json"
@@ -51,7 +56,7 @@ def get_stocky_transfers():
             if response.ok:
                 data = response.json()
                 for transfer in data.get("stock_transfers", []):
-                    # Show only "draft" and "in transit" (not archived, not received)
+                    # Filter transfers to show only "draft" and "in transit"
                     status = (
                         "Draft" if transfer.get("status") == "draft"
                         else "In Transit" if transfer.get("status") == "sent"
@@ -76,6 +81,7 @@ def get_stocky_transfers():
 
 @app.route("/transfer_items/<int:transfer_id>")
 def transfer_items(transfer_id):
+    """Fetch items for a specific transfer from the Stocky API."""
     url = f"https://stocky.shopifyapps.com/api/v2/stock_transfers/{transfer_id}.json"
     headers = {
         "Authorization": f"API KEY={STOCKY_API_KEY}",
@@ -101,6 +107,7 @@ def transfer_items(transfer_id):
     return {"items": []}, 404
 
 class TransferSheetPDF(FPDF):
+    """Custom PDF class for generating transfer sheets."""
     def __init__(self, stock_transfer_title, vendor, clerk, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.stock_transfer_title = stock_transfer_title
@@ -108,6 +115,7 @@ class TransferSheetPDF(FPDF):
         self.clerk = clerk
 
     def header(self):
+        """Define the header for the PDF."""
         try:
             self.image("static/logo.png", x=10, y=8, w=30)
         except:
@@ -135,6 +143,7 @@ class TransferSheetPDF(FPDF):
         self.ln(5)
 
     def transfer_table(self, items):
+        """Generate a table of transfer items."""
         self.set_font("Arial", "B", 12)
         col_widths = [15, 140, 35]  # Adjust as needed for your page size
         headers = ["QTY", "Title", "Bin Location"]
@@ -149,7 +158,7 @@ class TransferSheetPDF(FPDF):
             self.cell(col_widths[2], line_height, str(item.get("bin_location", "")), border=1, align='C')
             self.ln()
 
-# Authentication decorator
+# Authentication decorator to protect routes
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -161,6 +170,7 @@ def login_required(f):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Handle user login."""
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -174,6 +184,7 @@ def login():
 
 @app.route('/logout')
 def logout():
+    """Handle user logout."""
     session.pop('user_id', None)
     flash("Logged out successfully.", "success")
     return redirect(url_for('login'))
@@ -181,6 +192,7 @@ def logout():
 @app.route("/", methods=["GET", "POST"])
 @login_required
 def index():
+    """Main route for uploading CSVs and generating PDFs."""
     if request.method == "POST":
         # Handle form submission
         csv_file = request.files.get("csv")

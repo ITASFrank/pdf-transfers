@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Harbour Chandler PDF Generator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Include Bootstrap CSS and custom styles -->
     <link rel="stylesheet" href="/static/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/styles.css">
     <!-- Favicon links -->
@@ -16,96 +17,110 @@
     <meta name="msapplication-TileColor" content="#da532c">
     <meta name="msapplication-config" content="/static/favicon/browserconfig.xml">
     <meta name="theme-color" content="#ffffff">
+    <!-- Include Bootstrap JS and custom scripts -->
     <script src="/static/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/copyShopifyLink.js"></script>
     <script src="/static/js/helpModal.js"></script>
 </head>
 <body>
     <!-- Help Button (Question Mark) -->
-<button id="helpBtn" type="button" class="btn btn-outline-light position-fixed" 
-        style="top: 18px; right: 24px; z-index: 1051; border-radius: 50%; font-size: 1.8em; width: 44px; height: 44px;" 
-        data-bs-toggle="modal" data-bs-target="#helpModal">
-    ?
-</button>
+    <!-- This button triggers the help modal -->
+    <button id="helpBtn" type="button" class="btn btn-outline-light position-fixed" 
+            style="top: 18px; right: 24px; z-index: 1051; border-radius: 50%; font-size: 1.8em; width: 44px; height: 44px;" 
+            data-bs-toggle="modal" data-bs-target="#helpModal">
+        ?
+    </button>
 
-<!-- Help Modal -->
-<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="background: #23272a; color: #fff;">
-      <div class="modal-header">
-        <h5 class="modal-title" id="helpModalLabel">How to Make an Inventory Transfer</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body" style="font-size:1.1em;">
-        <ol>
-          <li>Click the <b>Get CSV</b> button for the transfer you want.<br>
-              <span style="color:#cfc;">If prompted, enter or <button class="btn btn-sm btn-outline-info" onclick="copyShopifyLink()">Copy</button> <code>2a7006-21.myshopify.com</code></span>
-          </li>
-          <li>Download the CSV (from browser download bar or your Downloads folder).</li>
-          <li>Drop the CSV file into the <b>PDF Generator</b> above, or click <b>Browse</b> to select it.</li>
-          <li>Select vendor, enter clerk name, and click <b>Generate & Download PDF</b>.</li>
-        </ol>
-        <div style="margin-top:1em; text-align: center;">
-          <img id="instructionGif" src="{{ url_for('static', filename='instructions.gif') }}" alt="Instruction GIF" style="max-width: 100%; border-radius: 8px; border: 1px solid #333;">
-          <br>
-          <button class="btn btn-sm btn-outline-light mt-2" onclick="restartGif()">↻ Restart GIF</button>
+    <!-- Help Modal -->
+    <!-- Modal providing instructions for making inventory transfers -->
+    <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #23272a; color: #fff;">
+          <div class="modal-header">
+            <h5 class="modal-title" id="helpModalLabel">How to Make an Inventory Transfer</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" style="font-size:1.1em;">
+            <ol>
+              <!-- Step-by-step instructions -->
+              <li>Click the <b>Get CSV</b> button for the transfer you want.<br>
+                  <span style="color:#cfc;">If prompted, enter or <button class="btn btn-sm btn-outline-info" onclick="copyShopifyLink()">Copy</button> <code>2a7006-21.myshopify.com</code></span>
+              </li>
+              <li>Download the CSV (from browser download bar or your Downloads folder).</li>
+              <li>Drop the CSV file into the <b>PDF Generator</b> above, or click <b>Browse</b> to select it.</li>
+              <li>Select vendor, enter clerk name, and click <b>Generate & Download PDF</b>.</li>
+            </ol>
+            <!-- Instructional GIF with restart button -->
+            <div style="margin-top:1em; text-align: center;">
+              <img id="instructionGif" src="{{ url_for('static', filename='instructions.gif') }}" alt="Instruction GIF" style="max-width: 100%; border-radius: 8px; border: 1px solid #333;">
+              <br>
+              <button class="btn btn-sm btn-outline-light mt-2" onclick="restartGif()">↻ Restart GIF</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
-<div class="transfer-card">
-    <div class="d-flex align-items-center mb-2">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Harbour Chandler Logo" class="logo-img me-3">
-        <div>
-            <h2 class="mb-0" style="font-weight: 700; font-size: 2rem;">Harbour Chandler PDF Generator</h2>
-            <small>52 Esplanade<br>Nanaimo, BC</small>
-        </div>
-        <div class="ms-auto text-end" style="margin-top:-16px;">
-            <div style="font-weight: 500;">Date: {{ today_date }}</div>
-        </div>
-    </div>
-    <hr style="border-color: #3a3b3c;">
-    <form method="POST" action="" enctype="multipart/form-data">
-        <div class="mb-3">
-            <label for="csv" class="form-label">Upload Stocky CSV File</label>
-            <input class="form-control" type="file" name="csv" id="csv" required>
-        </div>
-        <div class="mb-3">
-            <label for="vendor" class="form-label">Select Vendor</label>
-            <select class="form-select" name="vendor" id="vendor" required>
-                <option value="">-- Select Vendor --</option>
-                {% for v in vendor_options %}
-                    <option value="{{ v }}">{{ v }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="mb-3">
-            <label for="clerk" class="form-label">Clerk Name</label>
-            <input class="form-control" type="text" name="clerk" id="clerk" required placeholder="Enter clerk's name">
-        </div>
-        <button class="btn btn-primary w-100" type="submit">Generate & Download PDF</button>
-    </form>
-</div>
 
-<div class="active-list">
-    <h4 class="mb-3" style="font-weight: 700;">Inventory Transfers (Non-Archived)</h4>
-    {% if transfers and transfers|length > 0 %}
-        <div class="table-responsive">
-            <table class="table table-dark table-striped table-bordered align-middle">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Transfer #</th>
-                        <th>Created</th>
-                        <th>Origin</th>
-                        <th>Destination</th>
-                        <th>Status</th>
-                        <th>Note</th>
-                        <th>Stocky Page</th>
-                        <th>Get CSV</th>
-                    </tr>
-                </thead>
+    <!-- Transfer Generator Card -->
+    <!-- Form for uploading CSV and generating PDF -->
+    <div class="transfer-card">
+        <div class="d-flex align-items-center mb-2">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Harbour Chandler Logo" class="logo-img me-3">
+            <div>
+                <h2 class="mb-0" style="font-weight: 700; font-size: 2rem;">Harbour Chandler PDF Generator</h2>
+                <small>52 Esplanade<br>Nanaimo, BC</small>
+            </div>
+            <div class="ms-auto text-end" style="margin-top:-16px;">
+                <div style="font-weight: 500;">Date: {{ today_date }}</div>
+            </div>
+        </div>
+        <hr style="border-color: #3a3b3c;">
+        <form method="POST" action="" enctype="multipart/form-data">
+            <!-- File upload input -->
+            <div class="mb-3">
+                <label for="csv" class="form-label">Upload Stocky CSV File</label>
+                <input class="form-control" type="file" name="csv" id="csv" required>
+            </div>
+            <!-- Vendor selection dropdown -->
+            <div class="mb-3">
+                <label for="vendor" class="form-label">Select Vendor</label>
+                <select class="form-select" name="vendor" id="vendor" required>
+                    <option value="">-- Select Vendor --</option>
+                    {% for v in vendor_options %}
+                        <option value="{{ v }}">{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Clerk name input -->
+            <div class="mb-3">
+                <label for="clerk" class="form-label">Clerk Name</label>
+                <input class="form-control" type="text" name="clerk" id="clerk" required placeholder="Enter clerk's name">
+            </div>
+            <!-- Submit button -->
+            <button class="btn btn-primary w-100" type="submit">Generate & Download PDF</button>
+        </form>
+    </div>
+
+    <!-- Active Transfers List -->
+    <!-- Table displaying non-archived inventory transfers -->
+    <div class="active-list">
+        <h4 class="mb-3" style="font-weight: 700;">Inventory Transfers (Non-Archived)</h4>
+        {% if transfers and transfers|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-dark table-striped table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Transfer #</th>
+                            <th>Created</th>
+                            <th>Origin</th>
+                            <th>Destination</th>
+                            <th>Status</th>
+                            <th>Note</th>
+                            <th>Stocky Page</th>
+                            <th>Get CSV</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         {% for t in transfers %}
                         <tr>
@@ -137,12 +152,11 @@
                         </tr>
                         {% endfor %}
                     </tbody>
-                    
-            </table>
-        </div>
-    {% else %}
-        <div class="text-secondary">No active transfers available.</div>
-    {% endif %}
-</div>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-secondary">No active transfers available.</div>
+        {% endif %}
+    </div>
 </body>
 </html>
